@@ -6,6 +6,9 @@ const path = require("node:path");
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "0.0.0.0";
 const PUBLIC_DIR = process.env.PUBLIC_DIR || path.join(__dirname, "../web/public");
+const DATA_DIR = path.join(__dirname, "data");
+const AUTH_FILE = path.join(DATA_DIR, "beta-auth.json");
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const TICK_MS = 1000 / 60;
 const BROADCAST_MS = 1000 / 30;
 const GRID_W = 15;
@@ -21,18 +24,43 @@ const SYMBOLS = ["circle", "triangle", "cross", "diamond"];
 const POWERUPS = ["bombs", "flames", "speed"];
 const MODES = new Set(["friendly", "hardcore"]);
 const DIFFICULTIES = new Set(["easy", "normal", "hard"]);
+const loginAttempts = new Map();
+const authStore = createAuthStore();
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".png": "image/png",
   ".svg": "image/svg+xml"
 };
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname.startsWith("/api/")) {
+    handleApi(req, res, url);
+    return;
+  }
+
+  if (url.pathname === "/health") {
+    const payload = JSON.stringify({
+      ok: true,
+      service: "math-bomber-arena",
+      phase: game.phase,
+      clients: clients.size,
+      players: game.players.size,
+      uptime: Math.round(process.uptime())
+    });
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
+    });
+    res.end(payload);
+    return;
+  }
+
   const safePath = path.normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
   const filePath = path.join(PUBLIC_DIR, safePath === "/" ? "index.html" : safePath);
 
@@ -113,7 +141,7 @@ server.on("upgrade", (req, socket) => {
   broadcastState(true);
 });
 
-function handleMessage(client, raw) {
+async function handleMessage(client, raw) {
   let message;
   try {
     message = JSON.parse(raw);
@@ -122,12 +150,13 @@ function handleMessage(client, raw) {
   }
 
   if (message.type === "join") {
-    joinGame(
-      client,
-      String(message.nickname || "Player").slice(0, 18).trim() || "Player",
-      normalizeMode(message.mode),
-      normalizeDifficulty(message.difficulty)
-    );
+    const session = await validateToken(String(message.token || ""));
+    if (!session) {
+      send(client, { type: "error", code: "auth_required", text: "Login required." });
+      return;
+    }
+    client.account = session.player;
+    joinGame(client, session.player.displayName, normalizeMode(message.mode), normalizeDifficulty(message.difficulty));
   } else if (message.type === "input") {
     client.input = { ...client.input, ...message.input };
   } else if (message.type === "mathAnswer" && client.playerId) {
@@ -516,6 +545,315 @@ function disconnect(client) {
     broadcast({ type: "system", text: `${player.nickname} disconnected.` });
   }
   broadcastState(true);
+}
+
+async function handleApi(req, res, url) {
+  if (req.method === "OPTIONS") {
+    sendJson(res, 204, null);
+    return;
+  }
+
+  try {
+    if (req.method === "POST" && url.pathname === "/api/register") {
+      const body = await readJson(req);
+      const ip = req.socket.remoteAddress || "unknown";
+      if (tooManyAttempts(`register:${ip}`)) return sendJson(res, 429, { ok: false, error: "Too many attempts. Try again soon." });
+      const result = await registerPlayer(body);
+      return sendJson(res, result.status, result.payload);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/login") {
+      const body = await readJson(req);
+      const key = `login:${req.socket.remoteAddress || "unknown"}:${normalizeName(body.nickname)}`;
+      if (tooManyAttempts(key)) return sendJson(res, 429, { ok: false, error: "Too many attempts. Try again soon." });
+      const result = await loginPlayer(body);
+      return sendJson(res, result.status, result.payload);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/me") {
+      const session = await validateToken(readBearer(req));
+      if (!session) return sendJson(res, 401, { ok: false, error: "Login required." });
+      return sendJson(res, 200, { ok: true, player: publicPlayer(session.player) });
+    }
+
+    sendJson(res, 404, { ok: false, error: "Not found" });
+  } catch {
+    sendJson(res, 400, { ok: false, error: "Invalid request." });
+  }
+}
+
+async function registerPlayer(body) {
+  const nickname = cleanNickname(body.nickname);
+  const pin = String(body.pin || "");
+  if (!nickname) return result(400, "Nickname is required.");
+  if (!/^\d{4}$/.test(pin)) return result(400, "PIN must be exactly 4 digits.");
+  if (await authStore.findPlayer(normalizeName(nickname))) return result(409, "Nickname is already taken.");
+
+  const salt = crypto.randomBytes(16).toString("base64url");
+  const player = {
+    id: crypto.randomUUID(),
+    displayName: nickname,
+    normalizedName: normalizeName(nickname),
+    pinSalt: salt,
+    pinHash: hashPin(pin, salt),
+    createdAt: new Date().toISOString(),
+    lastLoginAt: null
+  };
+  await authStore.upsertPlayer(player);
+  return createSessionResponse(player, 201);
+}
+
+async function loginPlayer(body) {
+  const nickname = cleanNickname(body.nickname);
+  const pin = String(body.pin || "");
+  if (!nickname || !/^\d{4}$/.test(pin)) return result(400, "Enter nickname and 4-digit PIN.");
+  const player = await authStore.findPlayer(normalizeName(nickname));
+  if (!player || hashPin(pin, player.pinSalt) !== player.pinHash) return result(401, "Wrong nickname or PIN.");
+  return createSessionResponse(player, 200);
+}
+
+async function createSessionResponse(player, status) {
+  const token = crypto.randomBytes(32).toString("base64url");
+  const now = Date.now();
+  player.lastLoginAt = new Date(now).toISOString();
+  await authStore.upsertPlayer(player);
+  await authStore.addSession({
+    id: crypto.randomUUID(),
+    playerId: player.id,
+    tokenHash: hashToken(token),
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + SESSION_TTL_MS).toISOString(),
+    revokedAt: null
+  });
+  return {
+    status,
+    payload: {
+      ok: true,
+      token,
+      player: publicPlayer(player),
+      expiresAt: new Date(now + SESSION_TTL_MS).toISOString()
+    }
+  };
+}
+
+async function validateToken(token) {
+  if (!token) return null;
+  const session = await authStore.findSession(hashToken(token));
+  if (!session || session.revokedAt || Date.parse(session.expiresAt) <= Date.now()) return null;
+  const player = await authStore.findPlayerById(session.playerId);
+  if (!player) return null;
+  return { session, player };
+}
+
+function createAuthStore() {
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) return createSupabaseAuthStore();
+  const state = readAuthState();
+  return {
+    async findPlayer(normalizedName) {
+      return state.players.find(player => player.normalizedName === normalizedName) || null;
+    },
+    async findPlayerById(id) {
+      return state.players.find(player => player.id === id) || null;
+    },
+    async upsertPlayer(player) {
+      const index = state.players.findIndex(existing => existing.id === player.id);
+      if (index === -1) state.players.push(player);
+      else state.players[index] = player;
+      writeAuthState(state);
+    },
+    async addSession(session) {
+      state.sessions = state.sessions.filter(existing => Date.parse(existing.expiresAt) > Date.now() && !existing.revokedAt);
+      state.sessions.push(session);
+      writeAuthState(state);
+    },
+    async findSession(tokenHash) {
+      return state.sessions.find(session => session.tokenHash === tokenHash) || null;
+    }
+  };
+}
+
+function createSupabaseAuthStore() {
+  return {
+    async findPlayer(normalizedName) {
+      const rows = await supabaseSelect("beta_players", `normalized_name=eq.${encodeURIComponent(normalizedName)}&limit=1`);
+      return rows[0] ? fromSupabasePlayer(rows[0]) : null;
+    },
+    async findPlayerById(id) {
+      const rows = await supabaseSelect("beta_players", `id=eq.${encodeURIComponent(id)}&limit=1`);
+      return rows[0] ? fromSupabasePlayer(rows[0]) : null;
+    },
+    async upsertPlayer(player) {
+      await supabaseRequest("beta_players?on_conflict=id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify([toSupabasePlayer(player)])
+      });
+    },
+    async addSession(session) {
+      await supabaseRequest("beta_sessions", {
+        method: "POST",
+        body: JSON.stringify([toSupabaseSession(session)])
+      });
+    },
+    async findSession(tokenHash) {
+      const rows = await supabaseSelect("beta_sessions", `token_hash=eq.${encodeURIComponent(tokenHash)}&limit=1`);
+      return rows[0] ? fromSupabaseSession(rows[0]) : null;
+    }
+  };
+}
+
+async function supabaseSelect(table, query) {
+  return supabaseRequest(`${table}?select=*&${query}`, { method: "GET" });
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const base = process.env.SUPABASE_URL.replace(/\/$/, "");
+  const response = await fetch(`${base}/rest/v1/${pathname}`, {
+    ...options,
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!response.ok) throw new Error(`Supabase request failed: ${response.status}`);
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function toSupabasePlayer(player) {
+  return {
+    id: player.id,
+    display_name: player.displayName,
+    normalized_name: player.normalizedName,
+    pin_salt: player.pinSalt,
+    pin_hash: player.pinHash,
+    created_at: player.createdAt,
+    last_login_at: player.lastLoginAt
+  };
+}
+
+function fromSupabasePlayer(row) {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    normalizedName: row.normalized_name,
+    pinSalt: row.pin_salt,
+    pinHash: row.pin_hash,
+    createdAt: row.created_at,
+    lastLoginAt: row.last_login_at
+  };
+}
+
+function toSupabaseSession(session) {
+  return {
+    id: session.id,
+    player_id: session.playerId,
+    token_hash: session.tokenHash,
+    created_at: session.createdAt,
+    expires_at: session.expiresAt,
+    revoked_at: session.revokedAt
+  };
+}
+
+function fromSupabaseSession(row) {
+  return {
+    id: row.id,
+    playerId: row.player_id,
+    tokenHash: row.token_hash,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    revokedAt: row.revoked_at
+  };
+}
+
+function readAuthState() {
+  try {
+    return JSON.parse(fs.readFileSync(AUTH_FILE, "utf8"));
+  } catch {
+    return { players: [], sessions: [] };
+  }
+}
+
+function writeAuthState(state) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(AUTH_FILE, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+function hashPin(pin, salt) {
+  return crypto.pbkdf2Sync(pin, salt, 160000, 32, "sha256").toString("base64url");
+}
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("base64url");
+}
+
+function tooManyAttempts(key) {
+  const now = Date.now();
+  const bucket = loginAttempts.get(key) || [];
+  const recent = bucket.filter(at => now - at < 60000);
+  recent.push(now);
+  loginAttempts.set(key, recent);
+  return recent.length > 8;
+}
+
+function cleanNickname(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 18);
+}
+
+function normalizeName(value) {
+  return cleanNickname(value).toLowerCase();
+}
+
+function publicPlayer(player) {
+  return {
+    id: player.id,
+    displayName: player.displayName
+  };
+}
+
+function result(status, error) {
+  return { status, payload: { ok: false, error } };
+}
+
+function readBearer(req) {
+  const header = req.headers.authorization || "";
+  return header.startsWith("Bearer ") ? header.slice(7) : "";
+}
+
+function sendJson(res, status, payload) {
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": process.env.CORS_ORIGIN || "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+  });
+  if (status === 204) res.end();
+  else res.end(JSON.stringify(payload));
+}
+
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", chunk => {
+      raw += chunk;
+      if (raw.length > 8192) {
+        req.destroy();
+        reject(new Error("too large"));
+      }
+    });
+    req.on("end", () => {
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch (error) {
+        reject(error);
+      }
+    });
+    req.on("error", reject);
+  });
 }
 
 function snapshot() {

@@ -58,6 +58,25 @@ button {
   text-transform: uppercase;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.52;
+}
+
+.secondary-button {
+  border-color: rgb(146 150 184 / 0.42);
+  background: #242742;
+  color: var(--text);
+}
+
+.icon-button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 8px;
+}
+
 button:hover {
   filter: brightness(1.08);
 }
@@ -192,6 +211,49 @@ legend {
 .chat-form {
   display: flex;
   gap: 8px;
+}
+
+.join-row {
+  align-items: stretch;
+}
+
+.pin-input {
+  max-width: 96px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.auth-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.auth-status {
+  min-height: 22px;
+  color: var(--text-muted);
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.auth-status.error {
+  color: var(--danger);
+}
+
+.player-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid rgb(114 255 114 / 0.32);
+  border-radius: 8px;
+  background: rgb(114 255 114 / 0.08);
+  color: var(--lime);
+  font-weight: 900;
 }
 
 input {

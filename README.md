@@ -14,6 +14,8 @@ This repository starts as a clean MVP extracted from `bomberman-dom`, with a sta
 - Math tokens can drop from destroyed boxes.
 - Challenge modal with calculator-style buttons and desktop keyboard input.
 - Mobile D-pad and Bomb button.
+- PWA manifest, app icon, and service worker for install-to-home-screen testing.
+- Beta auth with nickname + 4-digit PIN through backend API.
 
 ## Run Locally
 
@@ -24,6 +26,38 @@ npm start
 Open `http://localhost:3000` in 2 to 4 browser tabs.
 
 The server also serves `apps/web/public` for local development. For Netlify, publish `apps/web/public` and set `window.MATH_BOMBER_WS_URL` in `apps/web/public/config.js` to the deployed WebSocket server URL, for example `wss://your-server.onrender.com`.
+
+## Beta Login
+
+The MVP uses a friend-only beta login:
+
+- Create/login with nickname + 4-digit PIN.
+- PINs are hashed on the backend.
+- Session tokens are stored in browser `localStorage`.
+- Local development stores beta users in `apps/server/data/beta-auth.json`, which is ignored by git.
+
+This is intentionally lightweight for testing with friends. Before a public release, add stronger abuse protection, invite codes, and a production auth review.
+
+## Environment
+
+Frontend config lives in `apps/web/public/config.js`:
+
+```js
+window.MATH_BOMBER_WS_URL = "wss://your-game-server.example.com";
+window.MATH_BOMBER_API_URL = "https://your-game-server.example.com";
+```
+
+Backend variables:
+
+```sh
+PORT=3000
+HOST=0.0.0.0
+CORS_ORIGIN=https://your-netlify-site.netlify.app
+SUPABASE_URL=https://yulwyakpfjxrgxtuqsvf.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-backend-only-service-role-key
+```
+
+Supabase schema lives in `supabase/migrations/001_beta_auth.sql` and has been prepared for the `Brain_bomber` Supabase project. Keep `SUPABASE_SERVICE_ROLE_KEY` on the backend only, never in Netlify frontend files. If those Supabase variables are missing, the backend uses the local ignored JSON fallback.
 
 ## Controls
 

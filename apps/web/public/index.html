@@ -3,7 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#070711">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Math Bomber">
     <title>Math Bomber Arena</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
     <link rel="stylesheet" href="/style.css">
   </head>
   <body>
@@ -19,8 +25,17 @@
         <form id="joinForm" class="join-form">
           <label for="nickname">Nickname</label>
           <div class="join-row">
-            <input id="nickname" name="nickname" maxlength="18" autocomplete="nickname" required placeholder="Pick a battle name" aria-describedby="nicknameHint">
-            <button id="joinButton" type="submit">Join</button>
+            <input id="nickname" name="nickname" maxlength="18" autocomplete="nickname" required placeholder="Pick a beta name" aria-describedby="nicknameHint">
+            <input id="pin" name="pin" class="pin-input" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" required placeholder="PIN">
+          </div>
+          <div class="auth-actions">
+            <button id="loginButton" type="button">Login</button>
+            <button id="registerButton" class="secondary-button" type="button">Create</button>
+          </div>
+          <div id="authStatus" class="auth-status" role="status">Login or create a beta account with a 4-digit PIN.</div>
+          <div id="playerBadge" class="player-badge is-hidden">
+            <span id="playerName">Player</span>
+            <button id="logoutButton" class="icon-button" type="button" aria-label="Logout">×</button>
           </div>
           <fieldset class="choice-group">
             <legend>Mode</legend>
@@ -42,6 +57,7 @@
             <label><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
           </fieldset>
           <p id="nicknameHint" class="form-hint">Move with WASD or arrows. Drop bombs with Space.</p>
+          <button id="joinButton" type="submit" disabled>Join Arena</button>
         </form>
       </section>
 

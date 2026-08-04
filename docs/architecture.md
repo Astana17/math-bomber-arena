@@ -19,7 +19,9 @@ Math challenge answers are never included in public player snapshots. The server
 
 ## Future Supabase Use
 
-Supabase should be added after the gameplay loop feels good. Good first tables:
+Supabase should be used for persistent profiles, sessions, leaderboard data, and match history. The current beta auth API has a local JSON fallback for development and a migration draft in `supabase/migrations/001_beta_auth.sql`.
+
+Good first tables:
 
 - `profiles`: auth user id or guest id, display name, avatar, created date.
 - `matches`: mode, difficulty, started/ended timestamps, winner.
@@ -27,3 +29,7 @@ Supabase should be added after the gameplay loop feels good. Good first tables:
 - `leaderboard_events`: score deltas, fastest answers, wins.
 
 Keep Supabase out of the hot movement loop. Realtime gameplay should stay on the WebSocket server.
+
+## Mobile App Path
+
+Start as a PWA deployed to Netlify. Players can open the URL on a phone and add it to the home screen. Once controls and sessions feel good, wrap the same frontend with Capacitor for Play Market and App Store builds.

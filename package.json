@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node apps/server/server.js",
     "dev": "node apps/server/server.js",
-    "check": "node --check apps/server/server.js && node --check apps/web/public/client.js"
+    "check": "node --check apps/server/server.js && node --check apps/web/public/client.js && node --check apps/web/public/service-worker.js"
   },
   "keywords": [
     "bomberman",

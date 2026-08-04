@@ -1,0 +1,19 @@
+{
+  "name": "Math Bomber Arena",
+  "short_name": "Math Bomber",
+  "description": "A mobile-friendly multiplayer math bomber arena for friends.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#070711",
+  "theme_color": "#070711",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

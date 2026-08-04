@@ -21,6 +21,14 @@ const chat = $(".chat");
 const gameTitle = $("#gameTitle");
 const tagline = $("#tagline");
 const joinButton = $("#joinButton");
+const loginButton = $("#loginButton");
+const registerButton = $("#registerButton");
+const logoutButton = $("#logoutButton");
+const authStatus = $("#authStatus");
+const playerBadge = $("#playerBadge");
+const playerName = $("#playerName");
+const nicknameInput = $("#nickname");
+const pinInput = $("#pin");
 const mathModal = $("#mathModal");
 const mathPrompt = $("#mathPrompt");
 const mathMode = $("#mathMode");
@@ -31,6 +39,10 @@ const touchButtons = $$("[data-touch-key]");
 const state = {
   socket: null,
   joined: false,
+  auth: {
+    token: localStorage.getItem("math-bomber-token") || "",
+    player: null
+  },
   me: null,
   game: null,
   keys: new Set(),
@@ -62,6 +74,8 @@ gameTitle.textContent = "Math Bomber Arena";
 tagline.textContent = "Bomb blocks, grab math tokens, solve fast.";
 joinButton.textContent = "Join";
 buildCalculator();
+restoreSession();
+registerServiceWorker();
 
 function connect() {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -81,6 +95,8 @@ function connect() {
       appendMessage(message.from, message.text, message.color, message.at);
     } else if (message.type === "system") {
       appendSystem(message.text);
+    } else if (message.type === "error") {
+      appendSystem(message.text || "Something went wrong.");
     }
   });
   on(state.socket, "close", () => {
@@ -90,13 +106,26 @@ function connect() {
 
 on(joinForm, "submit", event => {
   event.preventDefault();
+  if (!state.auth.token) {
+    setAuthStatus("Login before joining the arena.", true);
+    return;
+  }
   const data = new FormData(joinForm);
   send({
     type: "join",
-    nickname: data.get("nickname"),
+    token: state.auth.token,
     mode: data.get("mode"),
     difficulty: data.get("difficulty")
   });
+});
+
+on(loginButton, "click", () => authenticate("login"));
+on(registerButton, "click", () => authenticate("register"));
+on(logoutButton, "click", () => {
+  localStorage.removeItem("math-bomber-token");
+  state.auth = { token: "", player: null };
+  renderAuth();
+  setAuthStatus("Logged out. Your beta name is saved locally only after login.", false);
 });
 
 on(chatForm, "submit", event => {
@@ -134,6 +163,79 @@ on(window, "keyup", event => {
 
 function send(payload) {
   if (state.socket?.readyState === WebSocket.OPEN) state.socket.send(JSON.stringify(payload));
+}
+
+async function authenticate(action) {
+  const nickname = nicknameInput.value.trim();
+  const pin = pinInput.value.trim();
+  if (!nickname || !/^\d{4}$/.test(pin)) {
+    setAuthStatus("Enter nickname and exactly 4 PIN digits.", true);
+    return;
+  }
+  setAuthStatus(action === "register" ? "Creating beta account..." : "Logging in...", false);
+  try {
+    const response = await fetch(`${apiBase()}/api/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nickname, pin })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      setAuthStatus(data.error || "Auth failed.", true);
+      return;
+    }
+    state.auth = { token: data.token, player: data.player };
+    localStorage.setItem("math-bomber-token", data.token);
+    renderAuth();
+    setAuthStatus(`${data.player.displayName} is ready. Choose mode and join.`, false);
+  } catch {
+    setAuthStatus("Cannot reach game server auth API.", true);
+  }
+}
+
+async function restoreSession() {
+  if (!state.auth.token) {
+    renderAuth();
+    return;
+  }
+  try {
+    const response = await fetch(`${apiBase()}/api/me`, {
+      headers: { Authorization: `Bearer ${state.auth.token}` }
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error("expired");
+    state.auth.player = data.player;
+    nicknameInput.value = data.player.displayName;
+    renderAuth();
+    setAuthStatus(`${data.player.displayName} is ready.`, false);
+  } catch {
+    localStorage.removeItem("math-bomber-token");
+    state.auth = { token: "", player: null };
+    renderAuth();
+  }
+}
+
+function renderAuth() {
+  const player = state.auth.player;
+  joinButton.disabled = !player;
+  playerBadge.classList.toggle("is-hidden", !player);
+  if (player) playerName.textContent = player.displayName;
+}
+
+function setAuthStatus(text, isError) {
+  authStatus.textContent = text;
+  authStatus.classList.toggle("error", Boolean(isError));
+}
+
+function apiBase() {
+  return (window.MATH_BOMBER_API_URL || "").replace(/\/$/, "");
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+  });
 }
 
 function sendInput() {
