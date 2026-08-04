@@ -55,7 +55,8 @@ const server = http.createServer((req, res) => {
     });
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": process.env.CORS_ORIGIN || "*"
     });
     res.end(payload);
     return;

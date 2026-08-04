@@ -43,6 +43,8 @@ const themeButtons = $$("[data-theme-choice]");
 const joystick = $("#joystick");
 const joystickKnob = $("#joystickKnob");
 const THEME_STORAGE_KEY = "math-bomber-theme-v2";
+const PRODUCTION_API_URL = "https://brainbomber-production.up.railway.app";
+const PRODUCTION_WS_URL = "wss://brainbomber-production.up.railway.app";
 
 const state = {
   socket: null,
@@ -98,8 +100,7 @@ themeButtons.forEach(button => on(button, "click", () => applyTheme(button.datas
 
 function connect() {
   if ([WebSocket.OPEN, WebSocket.CONNECTING].includes(state.socket?.readyState)) return state.socket;
-  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const endpoint = window.MATH_BOMBER_WS_URL || `${protocol}//${location.host}`;
+  const endpoint = window.MATH_BOMBER_WS_URL || defaultWsBase();
   state.socket = new WebSocket(endpoint);
   on(state.socket, "open", () => {
     if (state.pendingJoin) {
@@ -218,8 +219,9 @@ async function authenticate(action) {
     return;
   }
   setAuthStatus(action === "register" ? "Creating beta account..." : "Logging in...", false);
+  const endpoint = `${apiBase()}/api/${action}`;
   try {
-    const response = await fetch(`${apiBase()}/api/${action}`, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nickname, pin })
@@ -236,7 +238,7 @@ async function authenticate(action) {
     loadLeaderboard();
     setAuthStatus(`${data.player.displayName} is ready. Choose mode and join.`, false);
   } catch {
-    setAuthStatus("Cannot reach game server auth API.", true);
+    setAuthStatus(`Cannot reach game server auth API: ${endpoint}`, true);
   }
 }
 
@@ -291,7 +293,21 @@ function setAuthStatus(text, isError) {
 }
 
 function apiBase() {
-  return (window.MATH_BOMBER_API_URL || "").replace(/\/$/, "");
+  return (window.MATH_BOMBER_API_URL || defaultApiBase()).replace(/\/$/, "");
+}
+
+function defaultApiBase() {
+  return isLocalHost() ? location.origin : PRODUCTION_API_URL;
+}
+
+function defaultWsBase() {
+  if (!isLocalHost()) return PRODUCTION_WS_URL;
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${location.host}`;
+}
+
+function isLocalHost() {
+  return ["localhost", "127.0.0.1", "0.0.0.0"].includes(location.hostname);
 }
 
 async function loadLeaderboard() {
