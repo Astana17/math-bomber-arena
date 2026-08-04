@@ -447,16 +447,16 @@ function renderCollection(className, items, normalize) {
     }
     const classValue = `entity ${className}${item.type ? ` ${className}--${item.type}` : ""}${className === "powerup" ? ` power-up power-up--${item.type}` : ""}`;
     if (el.className !== classValue) el.className = classValue;
-    el.style.setProperty("--x", item.x);
-    el.style.setProperty("--y", item.y);
+    setStyleVar(el, "--x", item.x);
+    setStyleVar(el, "--y", item.y);
     if (item.fuse !== undefined && created) {
-      el.style.setProperty("--pulse", `${Math.max(160, item.fuse / 4)}ms`);
+      setStyleVar(el, "--pulse", `${Math.max(160, item.fuse / 4)}ms`);
     }
     if (item.fuse !== undefined) {
       el.classList.toggle("urgent", item.fuse < 850);
     }
-    if (item.aria) el.setAttribute("aria-label", item.aria);
-    if (item.label) el.textContent = item.label;
+    if (item.aria && el.getAttribute("aria-label") !== item.aria) el.setAttribute("aria-label", item.aria);
+    if (item.label && el.textContent !== item.label) el.textContent = item.label;
   }
   removeMissing(store, needed);
 }
@@ -482,7 +482,7 @@ function renderPlayers(players) {
       previousStats.flameRange < player.flameRange ||
       previousStats.speed < player.speed
     );
-    el.className = [
+    const classValue = [
       "entity",
       "player",
       player.alive ? "" : "dead player--eliminated",
@@ -491,12 +491,14 @@ function renderPlayers(players) {
       previousLives !== undefined && previousLives > player.lives ? "player--damaged" : "",
       poweredUp ? "player--powered" : ""
     ].filter(Boolean).join(" ");
-    el.title = player.nickname;
-    el.setAttribute("aria-label", `${slotLabel(player)} ${player.nickname}`);
+    if (el.className !== classValue) el.className = classValue;
+    if (el.title !== player.nickname) el.title = player.nickname;
+    const ariaLabel = `${slotLabel(player)} ${player.nickname}`;
+    if (el.getAttribute("aria-label") !== ariaLabel) el.setAttribute("aria-label", ariaLabel);
     el.dataset.symbol = symbolGlyph(player.symbol);
-    el.style.setProperty("--px", player.x);
-    el.style.setProperty("--py", player.y);
-    el.style.setProperty("--color", player.color);
+    setStyleVar(el, "--px", player.x);
+    setStyleVar(el, "--py", player.y);
+    setStyleVar(el, "--color", player.color);
     const now = performance.now();
     const lastTrail = state.lastTrailAt.get(player.id) || 0;
     if (!state.lowMotion && previous && player.alive && now - lastTrail > 140 && Math.hypot(previous.x - player.x, previous.y - player.y) > 0.18) {
@@ -516,6 +518,11 @@ function removeMissing(store, needed) {
       store.delete(key);
     }
   }
+}
+
+function setStyleVar(el, name, value) {
+  const next = String(value);
+  if (el.style.getPropertyValue(name) !== next) el.style.setProperty(name, next);
 }
 
 function renderScoreboard(players, me) {

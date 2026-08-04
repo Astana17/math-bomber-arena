@@ -14,6 +14,7 @@
   --text-muted: #9296b8;
   --line: rgb(49 232 255 / 0.32);
   --cell: min(5.7vw, 5.7vh, 42px);
+  --arena-border: 3px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -512,17 +513,18 @@ input:focus {
 
 .arena-wrap {
   grid-area: arena;
-  width: calc(var(--cell) * 15);
+  width: calc(var(--cell) * 15 + var(--arena-border) * 2);
   max-width: 100%;
-  overflow: auto;
+  overflow: visible;
 }
 
 .arena {
+  box-sizing: content-box;
   position: relative;
   width: calc(var(--cell) * 15);
   height: calc(var(--cell) * 13);
   overflow: hidden;
-  border: 3px solid rgb(49 232 255 / 0.62);
+  border: var(--arena-border) solid rgb(49 232 255 / 0.62);
   background:
     linear-gradient(rgb(49 232 255 / 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgb(49 232 255 / 0.12) 1px, transparent 1px),
@@ -608,7 +610,7 @@ input:focus {
   z-index: 20;
   width: calc(var(--cell) * 0.76);
   height: calc(var(--cell) * 0.76);
-  transform: translate(calc((var(--px) - 0.38) * var(--cell)), calc((var(--py) - 0.38) * var(--cell)));
+  transform: translate3d(calc((var(--px) - 0.38) * var(--cell)), calc((var(--py) - 0.38) * var(--cell)), 0);
   border-radius: 44% 44% 36% 36%;
   background: linear-gradient(180deg, color-mix(in srgb, var(--color) 82%, white), var(--color));
   border: 2px solid rgb(255 255 255 / 0.5);
@@ -1330,6 +1332,7 @@ input:focus {
 
 body[data-theme="toybox"] {
   color-scheme: light;
+  --arena-border: 8px;
   --toy-bg: #f7e8c8;
   --toy-surface: #fff8e8;
   --toy-surface-strong: #fffdf4;
@@ -1598,13 +1601,12 @@ body[data-theme="toybox"] .power-legend {
 }
 
 body[data-theme="toybox"] .arena-wrap {
-  width: calc(var(--cell) * 15 + 18px);
+  width: calc(var(--cell) * 15 + var(--arena-border) * 2);
   overflow: visible;
 }
 
 body[data-theme="toybox"] .arena {
-  margin: 9px;
-  border: 8px solid var(--toy-wood-dark);
+  border: var(--arena-border) solid var(--toy-wood-dark);
   border-radius: 24px;
   background:
     linear-gradient(rgb(109 85 72 / 0.07) 1px, transparent 1px),
@@ -1928,6 +1930,55 @@ body[data-theme="toybox"] .message.system {
   border-left-color: var(--toy-yellow);
 }
 
+body[data-theme="toybox"] .math-modal {
+  background: rgb(73 59 52 / 0.46);
+  backdrop-filter: none;
+}
+
+body[data-theme="toybox"] .math-panel {
+  border: 3px solid var(--toy-outline);
+  border-radius: 24px;
+  background: #fffdf4;
+  box-shadow: var(--toy-shadow-soft);
+}
+
+body[data-theme="toybox"] .math-mode {
+  color: var(--toy-wood-dark);
+  text-transform: none;
+}
+
+body[data-theme="toybox"] .math-panel h2 {
+  color: var(--toy-text);
+  text-shadow: none;
+}
+
+body[data-theme="toybox"] .math-answer {
+  border: 3px solid var(--toy-outline);
+  border-radius: 16px;
+  background: #493b34;
+  color: #fffdf4;
+}
+
+body[data-theme="toybox"] .calculator button {
+  min-height: 62px;
+  border: 3px solid var(--toy-outline);
+  border-radius: 16px;
+  background: #fff0bd;
+  color: var(--toy-text);
+  font-size: 1.25rem;
+  box-shadow: 0 3px 0 rgb(91 66 50 / 16%);
+}
+
+body[data-theme="toybox"] .calculator .clear-key {
+  background: #f4d3c2;
+  color: #493b34;
+}
+
+body[data-theme="toybox"] .calculator .submit-key {
+  background: #86d690;
+  color: #17391e;
+}
+
 @keyframes toy-idle-glow {
   to {
     box-shadow: inset 0 -7px 0 rgb(91 66 50 / 0.18), 0 4px 0 rgb(91 66 50 / 0.18), 0 0 0 4px color-mix(in srgb, var(--color) 18%, transparent);
@@ -2069,15 +2120,14 @@ body[data-theme="toybox"] .trail {
     animation: none !important;
   }
 
-  .player,
   body[data-theme="toybox"] button {
     transition: none !important;
   }
 
-  .tile.wall::before,
-  .tile.wall::after,
-  .tile.block::before,
-  .tile.block::after,
+  .player {
+    transition: transform 70ms linear !important;
+  }
+
   .bomb::before,
   .bomb::after,
   .explosion::before,
@@ -2114,6 +2164,7 @@ body[data-theme="toybox"] .trail {
   }
 
   body[data-theme="toybox"] {
+    --arena-border: 5px;
     background: var(--toy-bg);
   }
 
@@ -2130,7 +2181,11 @@ body[data-theme="toybox"] .trail {
 
   body[data-theme="toybox"] .arena {
     border-width: 5px;
-    background: var(--toy-board);
+    background:
+      linear-gradient(rgb(109 85 72 / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(109 85 72 / 0.06) 1px, transparent 1px),
+      var(--toy-board);
+    background-size: var(--cell) var(--cell);
   }
 
   body[data-theme="toybox"] .tile.empty {
@@ -2138,26 +2193,32 @@ body[data-theme="toybox"] .trail {
   }
 
   body[data-theme="toybox"] .tile.wall {
-    margin: 2px;
-    width: calc(var(--cell) - 4px);
-    height: calc(var(--cell) - 4px);
-    border-width: 1px;
-    border-radius: 7px;
-    background: var(--toy-wood-mid);
-  }
-
-  body[data-theme="toybox"] .tile.block {
     margin: 3px;
     width: calc(var(--cell) - 6px);
     height: calc(var(--cell) - 6px);
-    border-width: 1px;
-    border-radius: 7px;
-    background: var(--toy-orange);
+    border-width: 2px;
+    border-radius: 9px;
+    background:
+      linear-gradient(180deg, rgb(255 230 178 / 0.42) 0 22%, transparent 23%),
+      linear-gradient(180deg, var(--toy-wood-light), var(--toy-wood-mid) 66%, var(--toy-wood-dark));
+  }
+
+  body[data-theme="toybox"] .tile.block {
+    margin: 4px;
+    width: calc(var(--cell) - 8px);
+    height: calc(var(--cell) - 8px);
+    border-width: 2px;
+    border-radius: 9px;
+    background:
+      linear-gradient(90deg, transparent 45%, rgb(109 85 72 / 0.18) 46% 53%, transparent 54%),
+      linear-gradient(180deg, #ffdca7, var(--toy-orange));
   }
 
   body[data-theme="toybox"] .player,
   body[data-theme="toybox"] .trail {
-    background: var(--color);
+    background:
+      radial-gradient(circle at 50% 22%, #fff8e8 0 7%, transparent 8%),
+      linear-gradient(180deg, color-mix(in srgb, var(--color) 70%, white), var(--color));
   }
 
   body[data-theme="toybox"] .bomb {
@@ -2219,13 +2280,12 @@ body[data-theme="toybox"] .trail {
   }
 
   body[data-theme="toybox"] .arena {
-    margin: 4px;
     border-width: 5px;
     border-radius: 17px;
   }
 
   body[data-theme="toybox"] .arena-wrap {
-    width: calc(var(--cell) * 15 + 8px);
+    width: calc(var(--cell) * 15 + var(--arena-border) * 2);
   }
 }
 
