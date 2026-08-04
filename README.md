@@ -2,7 +2,7 @@
 
 Math Bomber Arena is a mobile-friendly multiplayer web game inspired by Bomberman. Players move through a fixed DOM/CSS arena, place bombs, destroy boxes, collect math challenge tokens, and solve quick mental-math prompts for score.
 
-This repository starts as a clean MVP extracted from `bomberman-dom`, with a static frontend for Netlify and an authoritative Node.js WebSocket server for Render, Railway, Fly.io, or local play.
+This repository starts as a clean MVP extracted from `bomberman-dom`, with a static frontend for GitHub Pages and an authoritative Node.js WebSocket server for Railway, Render, Fly.io, or local play.
 
 ## MVP Status
 
@@ -13,7 +13,7 @@ This repository starts as a clean MVP extracted from `bomberman-dom`, with a sta
 - Hardcore Mode: frozen while answering and still vulnerable.
 - Math tokens can drop from destroyed boxes.
 - Challenge modal with calculator-style buttons and desktop keyboard input.
-- Mobile D-pad and Bomb button.
+- Mobile joystick and Bomb button.
 - PWA manifest, app icon, and service worker for install-to-home-screen testing.
 - Beta auth with nickname + 4-digit PIN through backend API.
 - Leaderboard with total score, games played, wins, solved math count, and best score.
@@ -26,7 +26,7 @@ npm start
 
 Open `http://localhost:3000` in 2 to 4 browser tabs.
 
-The server also serves `apps/web/public` for local development. For Netlify, publish `apps/web/public` and set `window.MATH_BOMBER_WS_URL` in `apps/web/public/config.js` to the deployed WebSocket server URL, for example `wss://your-server.onrender.com`.
+The server also serves `apps/web/public` for local development. In production, GitHub Pages publishes `apps/web/public` through `.github/workflows/deploy-pages.yml`, while the WebSocket/API backend runs separately on Railway.
 
 ## Beta Login
 
@@ -53,18 +53,20 @@ Backend variables:
 ```sh
 PORT=3000
 HOST=0.0.0.0
-CORS_ORIGIN=https://your-netlify-site.netlify.app
+CORS_ORIGIN=https://astana17.github.io
 SUPABASE_URL=https://yulwyakpfjxrgxtuqsvf.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-backend-only-service-role-key
 ```
 
-Supabase schema lives in `supabase/migrations/001_beta_auth.sql` and has been prepared for the `Brain_bomber` Supabase project. Keep `SUPABASE_SERVICE_ROLE_KEY` on the backend only, never in Netlify frontend files. If those Supabase variables are missing, the backend uses the local ignored JSON fallback.
+`SUPABASE_URL` is safe to show publicly, but `SUPABASE_SERVICE_ROLE_KEY` must always stay secret and backend-only. Put the real service role key only in Railway environment variables, never in README, `config.js`, frontend files, GitHub Pages, or browser code. If those Supabase variables are missing, the backend uses the local ignored JSON fallback.
+
+Supabase schema lives in `supabase/migrations/001_beta_auth.sql` and has been prepared for the `Brain_bomber` Supabase project.
 
 Leaderboard schema lives in `supabase/migrations/002_leaderboard.sql`.
 
 ## Controls
 
-- Move: `WASD`, arrow keys, or mobile D-pad.
+- Move: `WASD`, arrow keys, or mobile joystick.
 - Drop bomb: `Space` or mobile Bomb button.
 - Math modal: number keys, Backspace, Enter, or on-screen calculator.
 
@@ -79,4 +81,4 @@ Leaderboard schema lives in `supabase/migrations/002_leaderboard.sql`.
 7. Difficulty levels.
 8. Mobile controls.
 9. Supabase leaderboard, profiles, and match history.
-10. Netlify frontend plus hosted WebSocket backend deployment.
+10. GitHub Pages frontend plus hosted WebSocket backend deployment.

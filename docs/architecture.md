@@ -2,7 +2,7 @@
 
 ## Current MVP
 
-- `apps/web/public`: static frontend for Netlify.
+- `apps/web/public`: static frontend for GitHub Pages.
 - `apps/server`: Node.js HTTP + WebSocket server.
 - No external runtime dependencies yet.
 - Server owns the authoritative game state.
@@ -32,4 +32,4 @@ Keep Supabase out of the hot movement loop. Realtime gameplay should stay on the
 
 ## Mobile App Path
 
-Start as a PWA deployed to Netlify. Players can open the URL on a phone and add it to the home screen. Once controls and sessions feel good, wrap the same frontend with Capacitor for Play Market and App Store builds.
+Start as a PWA deployed to GitHub Pages. Players can open the URL on a phone and add it to the home screen. Once controls and sessions feel good, wrap the same frontend with Capacitor for Play Market and App Store builds.
