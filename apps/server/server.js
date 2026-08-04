@@ -86,6 +86,7 @@ let nextPlayerId = 1;
 let lobbyDeadline = null;
 let readyDeadline = null;
 let lastBroadcast = 0;
+let mapVersion = 1;
 
 const game = {
   phase: "lobby",
@@ -129,6 +130,7 @@ server.on("upgrade", (req, socket) => {
     playerId: null,
     nickname: "",
     input: { up: false, down: false, left: false, right: false, bomb: false },
+    mapVersion: 0,
     frameBuffer: Buffer.alloc(0)
   };
   clients.set(client.id, client);
@@ -234,6 +236,7 @@ function updateLobbyTimers() {
 function resetGame() {
   game.phase = "lobby";
   game.map = createMap();
+  mapVersion++;
   game.players.clear();
   game.bombs = [];
   game.explosions = [];
@@ -257,6 +260,7 @@ function startGame() {
   game.phase = "playing";
   game.startedAt = Date.now();
   game.map = createMap();
+  mapVersion++;
   game.bombs = [];
   game.explosions = [];
   game.powerups = [];
@@ -401,6 +405,7 @@ function explodeBomb(bomb, now) {
       cells.push({ x, y });
       if (cell === "block") {
         game.map[y][x] = "empty";
+        mapVersion++;
         maybeSpawnPowerup(x, y);
         if (owner) owner.score++;
         break;
@@ -999,7 +1004,7 @@ function snapshot() {
     phase: game.phase,
     me: null,
     grid: { w: GRID_W, h: GRID_H },
-    map: game.map,
+    mapVersion,
     players: [...game.players.values()].map(p => ({
       id: p.id,
       nickname: p.nickname,
@@ -1047,12 +1052,15 @@ function broadcastState(force) {
   const state = snapshot();
   for (const client of clients.values()) {
     const me = game.players.get(client.playerId);
+    const includeMap = force || client.mapVersion !== mapVersion;
     send(client, {
       ...state,
+      map: includeMap ? game.map : null,
       me: client.playerId,
       challenge: me?.challenge ? { id: me.challenge.id, prompt: me.challenge.prompt } : null,
       force
     });
+    if (includeMap) client.mapVersion = mapVersion;
   }
 }
 

@@ -2032,6 +2032,10 @@ body[data-theme="toybox"] .trail {
 }
 
 @media (max-width: 720px) {
+  body {
+    background: var(--background);
+  }
+
   body::after {
     display: none;
   }
@@ -2070,6 +2074,45 @@ body[data-theme="toybox"] .trail {
     transition: none !important;
   }
 
+  .tile.wall::before,
+  .tile.wall::after,
+  .tile.block::before,
+  .tile.block::after,
+  .bomb::before,
+  .bomb::after,
+  .explosion::before,
+  .explosion::after {
+    content: none !important;
+  }
+
+  .math-modal,
+  .match-overlay,
+  .lobby-sectors {
+    backdrop-filter: none !important;
+  }
+
+  .math-modal {
+    background: rgb(7 7 17 / 0.7);
+  }
+
+  .math-panel {
+    box-shadow: none;
+  }
+
+  .tile.empty {
+    background: rgb(17 17 38 / 0.18);
+  }
+
+  .tile.wall {
+    border-width: 1px;
+    background: #263253;
+  }
+
+  .tile.block {
+    border-width: 1px;
+    background: var(--magenta);
+  }
+
   body[data-theme="toybox"] {
     background: var(--toy-bg);
   }
@@ -2083,6 +2126,55 @@ body[data-theme="toybox"] .trail {
   body[data-theme="toybox"] .powerup,
   body[data-theme="toybox"] .mathToken {
     box-shadow: none;
+  }
+
+  body[data-theme="toybox"] .arena {
+    border-width: 5px;
+    background: var(--toy-board);
+  }
+
+  body[data-theme="toybox"] .tile.empty {
+    background: rgb(255 255 255 / 0.08);
+  }
+
+  body[data-theme="toybox"] .tile.wall {
+    margin: 2px;
+    width: calc(var(--cell) - 4px);
+    height: calc(var(--cell) - 4px);
+    border-width: 1px;
+    border-radius: 7px;
+    background: var(--toy-wood-mid);
+  }
+
+  body[data-theme="toybox"] .tile.block {
+    margin: 3px;
+    width: calc(var(--cell) - 6px);
+    height: calc(var(--cell) - 6px);
+    border-width: 1px;
+    border-radius: 7px;
+    background: var(--toy-orange);
+  }
+
+  body[data-theme="toybox"] .player,
+  body[data-theme="toybox"] .trail {
+    background: var(--color);
+  }
+
+  body[data-theme="toybox"] .bomb {
+    background: #3d3a3a;
+  }
+
+  body[data-theme="toybox"] .explosion {
+    background: var(--toy-yellow);
+  }
+
+  body[data-theme="toybox"] .math-modal {
+    background: rgb(73 59 52 / 0.42);
+  }
+
+  body[data-theme="toybox"] .math-panel {
+    border-width: 2px;
+    background: var(--toy-surface-strong);
   }
 
   body[data-theme="toybox"] .player:not(.player--moving):not(.dead),

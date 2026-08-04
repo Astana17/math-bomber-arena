@@ -351,7 +351,7 @@ function render(game) {
     setText(timer, game.challenge ? "Solve the challenge to move again." : "WASD or arrows move. Space drops bomb.");
   }
 
-  renderMap(game.map);
+  if (game.map) renderMap(game.map);
   renderCollection("bomb", game.bombs, b => ({ id: b.id, x: b.x, y: b.y, fuse: b.fuse }));
   renderCollection("explosion", game.explosions.flatMap(e => e.cells.map((cell, index) => ({ id: `${e.id}-${index}`, ...cell }))), e => e);
   renderCollection("powerup", game.powerups, p => ({ ...p, label: powerupLabel(p.type), aria: powerupName(p.type), type: p.type }));
@@ -416,6 +416,7 @@ function renderCollection(className, items, normalize) {
     const key = `${className}-${item.id}`;
     needed.add(key);
     let el = store.get(key);
+    const created = !el;
     if (!el) {
       el = h("div", { dataset: { key } });
       store.set(key, el);
@@ -425,8 +426,10 @@ function renderCollection(className, items, normalize) {
     if (el.className !== classValue) el.className = classValue;
     el.style.setProperty("--x", item.x);
     el.style.setProperty("--y", item.y);
-    if (item.fuse !== undefined) {
+    if (item.fuse !== undefined && created) {
       el.style.setProperty("--pulse", `${Math.max(160, item.fuse / 4)}ms`);
+    }
+    if (item.fuse !== undefined) {
       el.classList.toggle("urgent", item.fuse < 850);
     }
     if (item.aria) el.setAttribute("aria-label", item.aria);
@@ -604,6 +607,7 @@ function appendMessage(from, text, color = "#9296b8", at = Date.now()) {
     h("span", { text })
   ]);
   messages.append(el);
+  trimMessages();
   messages.scrollTop = messages.scrollHeight;
 }
 
@@ -613,7 +617,12 @@ function appendSystem(text) {
     h("span", { text: `SYSTEM: ${text}` })
   ]);
   messages.append(el);
+  trimMessages();
   messages.scrollTop = messages.scrollHeight;
+}
+
+function trimMessages() {
+  while (messages.children.length > 60) messages.firstElementChild?.remove();
 }
 
 function powerupLabel(type) {
