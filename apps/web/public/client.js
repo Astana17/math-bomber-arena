@@ -60,6 +60,8 @@ const state = {
   previousStats: new Map(),
   previousPositions: new Map(),
   explosionIds: new Set(),
+  lastTrailAt: new Map(),
+  lowMotion: window.matchMedia("(max-width: 720px), (prefers-reduced-motion: reduce)").matches,
   tiles: new Map(),
   entities: {
     bomb: new Map(),
@@ -387,8 +389,8 @@ function renderCollection(className, items, normalize) {
       store.set(key, el);
       arena.append(el);
     }
-    el.className = `entity ${className}${item.type ? ` ${className}--${item.type}` : ""}`;
-    if (className === "powerup") el.classList.add("power-up", `power-up--${item.type}`);
+    const classValue = `entity ${className}${item.type ? ` ${className}--${item.type}` : ""}${className === "powerup" ? ` power-up power-up--${item.type}` : ""}`;
+    if (el.className !== classValue) el.className = classValue;
     el.style.setProperty("--x", item.x);
     el.style.setProperty("--y", item.y);
     if (item.fuse !== undefined) {
@@ -437,8 +439,11 @@ function renderPlayers(players) {
     el.style.setProperty("--px", player.x);
     el.style.setProperty("--py", player.y);
     el.style.setProperty("--color", player.color);
-    if (previous && player.alive && Math.hypot(previous.x - player.x, previous.y - player.y) > 0.18) {
+    const now = performance.now();
+    const lastTrail = state.lastTrailAt.get(player.id) || 0;
+    if (!state.lowMotion && previous && player.alive && now - lastTrail > 140 && Math.hypot(previous.x - player.x, previous.y - player.y) > 0.18) {
       createTrail(previous.x, previous.y, player.color, player.symbol);
+      state.lastTrailAt.set(player.id, now);
     }
     state.previousPositions.set(player.id, { x: player.x, y: player.y });
     state.previousStats.set(player.id, { bombsMax: player.bombsMax, flameRange: player.flameRange, speed: player.speed });
@@ -525,7 +530,7 @@ function renderOverlay(game) {
 function runExplosionEffects(game) {
   const ids = new Set(game.explosions.map(explosion => explosion.id));
   const hasNewExplosion = [...ids].some(id => !state.explosionIds.has(id));
-  if (hasNewExplosion) {
+  if (hasNewExplosion && !state.lowMotion) {
     arena.classList.remove("shake");
     void arena.offsetWidth;
     arena.classList.add("shake");
@@ -546,7 +551,8 @@ function createTrail(x, y, color, symbol) {
 }
 
 function createDebris(x, y) {
-  for (let index = 0; index < 5; index++) {
+  if (state.lowMotion) return;
+  for (let index = 0; index < 3; index++) {
     const bit = h("div", {
       className: "debris",
       "--x": x,
@@ -587,7 +593,7 @@ function powerupName(type) {
 }
 
 function buildCalculator() {
-  const buttons = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "Clear", "0", "Submit"];
+  const buttons = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "Clear", "0", "Submit"];
   setChildren(calculator, buttons.map(label => h("button", {
     type: "button",
     className: label === "Submit" ? "submit-key" : label === "Clear" ? "clear-key" : "",
