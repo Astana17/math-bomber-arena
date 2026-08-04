@@ -10,7 +10,10 @@ const timer = $("#timer");
 const room = $("#room");
 const playersCount = $("#playersCount");
 const matchClock = $("#matchClock");
+const topScores = $("#topScores");
 const scoreboard = $("#scoreboard");
+const leaderboard = $("#leaderboard");
+const refreshLeaderboard = $("#refreshLeaderboard");
 const lobbySectors = $("#lobbySectors");
 const matchOverlay = $("#matchOverlay");
 const messages = $("#messages");
@@ -35,6 +38,8 @@ const mathMode = $("#mathMode");
 const mathAnswer = $("#mathAnswer");
 const calculator = $("#calculator");
 const touchButtons = $$("[data-touch-key]");
+const joystick = $("#joystick");
+const joystickKnob = $("#joystickKnob");
 
 const state = {
   socket: null,
@@ -64,6 +69,8 @@ const state = {
     player: new Map()
   },
   scoreboardSig: "",
+  topScoresSig: "",
+  leaderboardSig: "",
   lobbySig: "",
   overlaySig: "",
   renderQueued: false
@@ -72,9 +79,10 @@ const state = {
 document.title = "Math Bomber Arena";
 gameTitle.textContent = "Math Bomber Arena";
 tagline.textContent = "Bomb blocks, grab math tokens, solve fast.";
-joinButton.textContent = "Join";
+joinButton.textContent = "Join Arena";
 buildCalculator();
 restoreSession();
+loadLeaderboard();
 registerServiceWorker();
 
 function connect() {
@@ -91,6 +99,7 @@ function connect() {
       state.joined = true;
       gate.classList.add("is-hidden");
       gameScreen.classList.remove("is-hidden");
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     } else if (message.type === "chat") {
       appendMessage(message.from, message.text, message.color, message.at);
     } else if (message.type === "system") {
@@ -121,6 +130,7 @@ on(joinForm, "submit", event => {
 
 on(loginButton, "click", () => authenticate("login"));
 on(registerButton, "click", () => authenticate("register"));
+on(refreshLeaderboard, "click", () => loadLeaderboard());
 on(logoutButton, "click", () => {
   localStorage.removeItem("math-bomber-token");
   state.auth = { token: "", player: null };
@@ -231,6 +241,33 @@ function apiBase() {
   return (window.MATH_BOMBER_API_URL || "").replace(/\/$/, "");
 }
 
+async function loadLeaderboard() {
+  try {
+    const response = await fetch(`${apiBase()}/api/leaderboard`);
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error("leaderboard");
+    renderLeaderboard(data.leaders || []);
+  } catch {
+    setChildren(leaderboard, [h("p", { className: "form-hint", text: "Leaderboard is unavailable right now." })]);
+  }
+}
+
+function renderLeaderboard(leaders) {
+  const sig = JSON.stringify(leaders);
+  if (sig === state.leaderboardSig) return;
+  state.leaderboardSig = sig;
+  if (!leaders.length) {
+    setChildren(leaderboard, [h("p", { className: "form-hint", text: "Scores appear after completed matches." })]);
+    return;
+  }
+  setChildren(leaderboard, leaders.map(row => h("div", { className: "leader-row" }, [
+    h("strong", { text: `#${row.rank}` }),
+    h("span", { text: row.displayName }),
+    h("b", { text: row.totalScore }),
+    h("small", { text: `${row.gamesPlayed} games · ${row.wins} wins · best ${row.bestScore}` })
+  ])));
+}
+
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
   window.addEventListener("load", () => {
@@ -290,11 +327,26 @@ function render(game) {
   renderCollection("powerup", game.powerups, p => ({ ...p, label: powerupLabel(p.type), aria: powerupName(p.type), type: p.type }));
   renderCollection("mathToken", game.mathTokens || [], token => ({ ...token, label: "=", aria: "Math challenge token" }));
   renderPlayers(game.players);
+  renderTopScores(game.players, game.me);
   renderScoreboard(game.players, game.me);
   renderLobbySectors(game);
   renderOverlay(game);
   renderMathModal(game);
   runExplosionEffects(game);
+}
+
+function renderTopScores(players, me) {
+  const sorted = [...players].sort((a, b) => b.score - a.score || b.mathSolved - a.mathSolved);
+  const sig = JSON.stringify(sorted.map(player => [player.id, player.nickname, player.score, player.mathSolved, player.color, player.id === me]));
+  if (sig === state.topScoresSig) return;
+  state.topScoresSig = sig;
+  setChildren(topScores, sorted.map((player, index) => h("div", {
+    className: `score-pill${player.id === me ? " me" : ""}`
+  }, [
+    h("i", { style: { background: player.color } }),
+    h("span", { text: `${index + 1}. ${player.nickname}` }),
+    h("b", { text: player.score })
+  ])));
 }
 
 function renderMap(map) {
@@ -460,6 +512,7 @@ function renderOverlay(game) {
       overlayLine("strong", game.winner?.nickname || "NO SURVIVORS", game.winner?.color || "#ffe66d"),
       overlayLine("small", "MATCH COMPLETE")
     ]);
+    loadLeaderboard();
   } else if (me && !me.alive) {
     setChildren(matchOverlay, [
       overlayLine("span", "SYSTEM FAILURE"),
@@ -633,5 +686,46 @@ touchButtons.forEach(button => {
   on(button, "pointercancel", () => set(false));
   on(button, "lostpointercapture", () => set(false));
 });
+
+if (joystick) {
+  const resetJoystick = () => {
+    state.touch.up = false;
+    state.touch.down = false;
+    state.touch.left = false;
+    state.touch.right = false;
+    joystickKnob.style.transform = "translate(-50%, -50%)";
+    sendInput();
+  };
+  const moveJoystick = event => {
+    const rect = joystick.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const max = rect.width * 0.34;
+    const rawX = event.clientX - centerX;
+    const rawY = event.clientY - centerY;
+    const length = Math.hypot(rawX, rawY) || 1;
+    const scale = Math.min(1, max / length);
+    const x = rawX * scale;
+    const y = rawY * scale;
+    const threshold = max * 0.32;
+    joystickKnob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    state.touch.left = x < -threshold;
+    state.touch.right = x > threshold;
+    state.touch.up = y < -threshold;
+    state.touch.down = y > threshold;
+    sendInput();
+  };
+  on(joystick, "pointerdown", event => {
+    event.preventDefault();
+    joystick.setPointerCapture?.(event.pointerId);
+    moveJoystick(event);
+  });
+  on(joystick, "pointermove", event => {
+    if (event.buttons) moveJoystick(event);
+  });
+  on(joystick, "pointerup", resetJoystick);
+  on(joystick, "pointercancel", resetJoystick);
+  on(joystick, "lostpointercapture", resetJoystick);
+}
 
 connect();

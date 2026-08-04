@@ -16,6 +16,7 @@ This repository starts as a clean MVP extracted from `bomberman-dom`, with a sta
 - Mobile D-pad and Bomb button.
 - PWA manifest, app icon, and service worker for install-to-home-screen testing.
 - Beta auth with nickname + 4-digit PIN through backend API.
+- Leaderboard with total score, games played, wins, solved math count, and best score.
 
 ## Run Locally
 
@@ -58,6 +59,8 @@ SUPABASE_SERVICE_ROLE_KEY=your-backend-only-service-role-key
 ```
 
 Supabase schema lives in `supabase/migrations/001_beta_auth.sql` and has been prepared for the `Brain_bomber` Supabase project. Keep `SUPABASE_SERVICE_ROLE_KEY` on the backend only, never in Netlify frontend files. If those Supabase variables are missing, the backend uses the local ignored JSON fallback.
+
+Leaderboard schema lives in `supabase/migrations/002_leaderboard.sql`.
 
 ## Controls
 

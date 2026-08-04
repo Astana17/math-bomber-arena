@@ -98,6 +98,7 @@ const game = {
   mode: "friendly",
   difficulty: "easy",
   winner: null,
+  resultsRecorded: false,
   startedAt: 0
 };
 
@@ -202,7 +203,8 @@ function joinGame(client, nickname, mode, difficulty) {
     placedBombs: 0,
     score: 0,
     challenge: null,
-    mathSolved: 0
+    mathSolved: 0,
+    accountId: client.account?.id || null
   };
   game.players.set(id, player);
   client.playerId = id;
@@ -231,6 +233,7 @@ function resetGame() {
   game.mode = "friendly";
   game.difficulty = "easy";
   game.winner = null;
+  game.resultsRecorded = false;
   game.startedAt = 0;
   nextPlayerId = 1;
   lobbyDeadline = null;
@@ -249,6 +252,7 @@ function startGame() {
   game.explosions = [];
   game.powerups = [];
   game.mathTokens = [];
+  game.resultsRecorded = false;
   for (const [index, player] of [...game.players.values()].entries()) {
     const start = STARTS[index];
     Object.assign(player, {
@@ -487,18 +491,18 @@ function createMathChallenge(difficulty) {
     },
     normal: () => {
       const op = ["+", "-", "*", "/"][rand(0, 3)];
-      if (op === "*") return { a: rand(2, 9), op, b: rand(2, 9), answer: 0 };
-      if (op === "/") return division(9, 9);
-      const a = rand(5, 35);
-      const b = rand(2, 25);
+      if (op === "*") return { a: rand(4, 12), op, b: rand(3, 12), answer: 0 };
+      if (op === "/") return division(12, 12);
+      const a = rand(18, 60);
+      const b = rand(12, 45);
       return op === "+" ? { a, op, b, answer: a + b } : { a: Math.max(a, b), op, b: Math.min(a, b), answer: Math.abs(a - b) };
     },
     hard: () => {
       const op = ["+", "-", "*", "/"][rand(0, 3)];
-      if (op === "*") return { a: rand(7, 13), op, b: rand(6, 12), answer: 0 };
-      if (op === "/") return division(12, 12);
-      const a = rand(28, 99);
-      const b = rand(18, 89);
+      if (op === "*") return { a: rand(12, 19), op, b: rand(7, 16), answer: 0 };
+      if (op === "/") return division(16, 18);
+      const a = rand(72, 180);
+      const b = rand(38, 125);
       return op === "+" ? { a, op, b, answer: a + b } : { a: Math.max(a, b), op, b: Math.min(a, b), answer: Math.abs(a - b) };
     }
   };
@@ -522,6 +526,7 @@ function checkWinner() {
     game.phase = "ended";
     game.winner = alive[0] || null;
     broadcast({ type: "system", text: game.winner ? `${game.winner.nickname} wins!` : "Nobody survived." });
+    recordMatchResults().catch(() => {});
   }
 }
 
@@ -574,6 +579,11 @@ async function handleApi(req, res, url) {
       const session = await validateToken(readBearer(req));
       if (!session) return sendJson(res, 401, { ok: false, error: "Login required." });
       return sendJson(res, 200, { ok: true, player: publicPlayer(session.player) });
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/leaderboard") {
+      const leaders = await authStore.getLeaderboard(10);
+      return sendJson(res, 200, { ok: true, leaders });
     }
 
     sendJson(res, 404, { ok: false, error: "Not found" });
@@ -668,6 +678,36 @@ function createAuthStore() {
     },
     async findSession(tokenHash) {
       return state.sessions.find(session => session.tokenHash === tokenHash) || null;
+    },
+    async recordMatch(entries) {
+      state.leaderboard ||= [];
+      for (const entry of entries) {
+        const existing = state.leaderboard.find(row => row.playerId === entry.playerId);
+        if (existing) {
+          existing.displayName = entry.displayName;
+          existing.totalScore += entry.score;
+          existing.gamesPlayed += 1;
+          existing.wins += entry.won ? 1 : 0;
+          existing.mathSolved += entry.mathSolved;
+          existing.bestScore = Math.max(existing.bestScore, entry.score);
+          existing.updatedAt = new Date().toISOString();
+        } else {
+          state.leaderboard.push({
+            playerId: entry.playerId,
+            displayName: entry.displayName,
+            totalScore: entry.score,
+            gamesPlayed: 1,
+            wins: entry.won ? 1 : 0,
+            mathSolved: entry.mathSolved,
+            bestScore: entry.score,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+      writeAuthState(state);
+    },
+    async getLeaderboard(limit = 10) {
+      return formatLeaderboard(state.leaderboard || [], limit);
     }
   };
 }
@@ -698,6 +738,47 @@ function createSupabaseAuthStore() {
     async findSession(tokenHash) {
       const rows = await supabaseSelect("beta_sessions", `token_hash=eq.${encodeURIComponent(tokenHash)}&limit=1`);
       return rows[0] ? fromSupabaseSession(rows[0]) : null;
+    },
+    async recordMatch(entries) {
+      for (const entry of entries) {
+        const existing = await supabaseSelect("beta_leaderboard", `player_id=eq.${encodeURIComponent(entry.playerId)}&limit=1`);
+        const current = existing[0] || {
+          player_id: entry.playerId,
+          display_name: entry.displayName,
+          total_score: 0,
+          games_played: 0,
+          wins: 0,
+          math_solved: 0,
+          best_score: 0
+        };
+        await supabaseRequest("beta_leaderboard?on_conflict=player_id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify([{
+            player_id: entry.playerId,
+            display_name: entry.displayName,
+            total_score: current.total_score + entry.score,
+            games_played: current.games_played + 1,
+            wins: current.wins + (entry.won ? 1 : 0),
+            math_solved: current.math_solved + entry.mathSolved,
+            best_score: Math.max(current.best_score, entry.score),
+            updated_at: new Date().toISOString()
+          }])
+        });
+      }
+    },
+    async getLeaderboard(limit = 10) {
+      const rows = await supabaseSelect("beta_leaderboard", `order=total_score.desc,wins.desc,games_played.asc&limit=${limit}`);
+      return rows.map((row, index) => ({
+        rank: index + 1,
+        playerId: row.player_id,
+        displayName: row.display_name,
+        totalScore: row.total_score,
+        gamesPlayed: row.games_played,
+        wins: row.wins,
+        mathSolved: row.math_solved,
+        bestScore: row.best_score
+      }));
     }
   };
 }
@@ -767,6 +848,28 @@ function fromSupabaseSession(row) {
     expiresAt: row.expires_at,
     revokedAt: row.revoked_at
   };
+}
+
+async function recordMatchResults() {
+  if (game.resultsRecorded) return;
+  game.resultsRecorded = true;
+  const entries = [...game.players.values()]
+    .filter(player => player.accountId)
+    .map(player => ({
+      playerId: player.accountId,
+      displayName: player.nickname,
+      score: player.score,
+      mathSolved: player.mathSolved,
+      won: game.winner?.id === player.id
+    }));
+  if (entries.length) await authStore.recordMatch(entries);
+}
+
+function formatLeaderboard(rows, limit) {
+  return [...rows]
+    .sort((a, b) => b.totalScore - a.totalScore || b.wins - a.wins || a.gamesPlayed - b.gamesPlayed)
+    .slice(0, limit)
+    .map((row, index) => ({ rank: index + 1, ...row }));
 }
 
 function readAuthState() {
