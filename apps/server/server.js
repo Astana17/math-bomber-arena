@@ -665,6 +665,7 @@ async function createSessionResponse(player, status) {
   const now = Date.now();
   player.lastLoginAt = new Date(now).toISOString();
   await authStore.upsertPlayer(player);
+  await authStore.ensureLeaderboardPlayer(player);
   await authStore.addSession({
     id: crypto.randomUUID(),
     playerId: player.id,
@@ -716,6 +717,16 @@ function createAuthStore() {
     },
     async findSession(tokenHash) {
       return state.sessions.find(session => session.tokenHash === tokenHash) || null;
+    },
+    async ensureLeaderboardPlayer(player) {
+      state.leaderboard ||= [];
+      const existing = state.leaderboard.find(row => row.playerId === player.id);
+      if (existing) {
+        existing.displayName = player.displayName;
+      } else {
+        state.leaderboard.push(createEmptyLeaderboardRow(player));
+      }
+      writeAuthState(state);
     },
     async recordMatch(entries) {
       state.leaderboard ||= [];
@@ -776,6 +787,26 @@ function createSupabaseAuthStore() {
     async findSession(tokenHash) {
       const rows = await supabaseSelect("beta_sessions", `token_hash=eq.${encodeURIComponent(tokenHash)}&limit=1`);
       return rows[0] ? fromSupabaseSession(rows[0]) : null;
+    },
+    async ensureLeaderboardPlayer(player) {
+      const existing = await supabaseSelect("beta_leaderboard", `player_id=eq.${encodeURIComponent(player.id)}&limit=1`);
+      if (existing[0]) {
+        await supabaseRequest("beta_leaderboard?on_conflict=player_id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates" },
+          body: JSON.stringify([{
+            ...existing[0],
+            display_name: player.displayName,
+            updated_at: new Date().toISOString()
+          }])
+        });
+        return;
+      }
+      await supabaseRequest("beta_leaderboard?on_conflict=player_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates" },
+        body: JSON.stringify([toSupabaseLeaderboardRow(createEmptyLeaderboardRow(player))])
+      });
     },
     async recordMatch(entries) {
       for (const entry of entries) {
@@ -885,6 +916,32 @@ function fromSupabaseSession(row) {
     createdAt: row.created_at,
     expiresAt: row.expires_at,
     revokedAt: row.revoked_at
+  };
+}
+
+function createEmptyLeaderboardRow(player) {
+  return {
+    playerId: player.id,
+    displayName: player.displayName,
+    totalScore: 0,
+    gamesPlayed: 0,
+    wins: 0,
+    mathSolved: 0,
+    bestScore: 0,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function toSupabaseLeaderboardRow(row) {
+  return {
+    player_id: row.playerId,
+    display_name: row.displayName,
+    total_score: row.totalScore,
+    games_played: row.gamesPlayed,
+    wins: row.wins,
+    math_solved: row.mathSolved,
+    best_score: row.bestScore,
+    updated_at: row.updatedAt
   };
 }
 

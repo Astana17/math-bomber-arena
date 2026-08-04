@@ -51,6 +51,7 @@ const state = {
     token: storageGet("math-bomber-token") || "",
     player: null
   },
+  pendingJoin: null,
   me: null,
   game: null,
   keys: new Set(),
@@ -96,9 +97,16 @@ registerServiceWorker();
 themeButtons.forEach(button => on(button, "click", () => applyTheme(button.dataset.themeChoice)));
 
 function connect() {
+  if ([WebSocket.OPEN, WebSocket.CONNECTING].includes(state.socket?.readyState)) return state.socket;
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const endpoint = window.MATH_BOMBER_WS_URL || `${protocol}//${location.host}`;
   state.socket = new WebSocket(endpoint);
+  on(state.socket, "open", () => {
+    if (state.pendingJoin) {
+      send(state.pendingJoin);
+      setAuthStatus("Joining arena...", false);
+    }
+  });
   on(state.socket, "message", event => {
     const message = JSON.parse(event.data);
     if (message.type === "state") {
@@ -106,6 +114,7 @@ function connect() {
       state.me = message.me;
       scheduleRender();
     } else if (message.type === "joined") {
+      state.pendingJoin = null;
       state.joined = true;
       gate.classList.add("is-hidden");
       gameScreen.classList.remove("is-hidden");
@@ -117,12 +126,17 @@ function connect() {
     } else if (message.type === "system") {
       appendSystem(message.text);
     } else if (message.type === "error") {
+      state.pendingJoin = null;
       appendSystem(message.text || "Something went wrong.");
+      setAuthStatus(message.text || "Something went wrong.", true);
     }
   });
   on(state.socket, "close", () => {
-    appendSystem("Connection lost. Refresh to reconnect.");
+    state.socket = null;
+    if (state.joined) appendSystem("Connection lost. Reconnecting...");
+    else if (state.pendingJoin) setAuthStatus("Connection lost. Tap Join Arena again.", true);
   });
+  return state.socket;
 }
 
 on(joinForm, "submit", event => {
@@ -132,12 +146,16 @@ on(joinForm, "submit", event => {
     return;
   }
   const data = new FormData(joinForm);
-  send({
+  state.pendingJoin = {
     type: "join",
     token: state.auth.token,
     mode: data.get("mode"),
     difficulty: data.get("difficulty")
-  });
+  };
+  if (!send(state.pendingJoin)) {
+    setAuthStatus("Connecting to arena...", false);
+    connect();
+  }
 });
 
 on(loginButton, "click", () => authenticate("login"));
@@ -187,7 +205,9 @@ on(window, "keyup", event => {
 });
 
 function send(payload) {
-  if (state.socket?.readyState === WebSocket.OPEN) state.socket.send(JSON.stringify(payload));
+  if (state.socket?.readyState !== WebSocket.OPEN) return false;
+  state.socket.send(JSON.stringify(payload));
+  return true;
 }
 
 async function authenticate(action) {
@@ -212,6 +232,8 @@ async function authenticate(action) {
     state.auth = { token: data.token, player: data.player };
     storageSet("math-bomber-token", data.token);
     renderAuth();
+    connect();
+    loadLeaderboard();
     setAuthStatus(`${data.player.displayName} is ready. Choose mode and join.`, false);
   } catch {
     setAuthStatus("Cannot reach game server auth API.", true);
@@ -253,6 +275,7 @@ function showGate() {
   gameScreen.classList.add("is-hidden");
   mathModal.classList.add("is-hidden");
   state.joined = false;
+  state.pendingJoin = null;
   state.me = null;
   state.game = null;
   state.keys.clear();
