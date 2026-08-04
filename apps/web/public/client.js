@@ -46,7 +46,7 @@ const state = {
   socket: null,
   joined: false,
   auth: {
-    token: localStorage.getItem("math-bomber-token") || "",
+    token: storageGet("math-bomber-token") || "",
     player: null
   },
   me: null,
@@ -77,7 +77,7 @@ const state = {
   lobbySig: "",
   overlaySig: "",
   renderQueued: false,
-  theme: localStorage.getItem("math-bomber-theme") === "toybox" ? "toybox" : "cyber"
+  theme: storageGet("math-bomber-theme") === "toybox" ? "toybox" : "cyber"
 };
 
 document.title = "Math Bomber Arena";
@@ -139,7 +139,7 @@ on(loginButton, "click", () => authenticate("login"));
 on(registerButton, "click", () => authenticate("register"));
 on(refreshLeaderboard, "click", () => loadLeaderboard());
 on(logoutButton, "click", () => {
-  localStorage.removeItem("math-bomber-token");
+  storageRemove("math-bomber-token");
   state.auth = { token: "", player: null };
   renderAuth();
   setAuthStatus("Logged out. Your beta name is saved locally only after login.", false);
@@ -202,7 +202,7 @@ async function authenticate(action) {
       return;
     }
     state.auth = { token: data.token, player: data.player };
-    localStorage.setItem("math-bomber-token", data.token);
+    storageSet("math-bomber-token", data.token);
     renderAuth();
     setAuthStatus(`${data.player.displayName} is ready. Choose mode and join.`, false);
   } catch {
@@ -226,7 +226,7 @@ async function restoreSession() {
     renderAuth();
     setAuthStatus(`${data.player.displayName} is ready.`, false);
   } catch {
-    localStorage.removeItem("math-bomber-token");
+    storageRemove("math-bomber-token");
     state.auth = { token: "", player: null };
     renderAuth();
   }
@@ -682,12 +682,32 @@ function overlayLine(tag, text, color) {
 function applyTheme(theme) {
   state.theme = theme === "toybox" ? "toybox" : "cyber";
   document.body.dataset.theme = state.theme;
-  localStorage.setItem("math-bomber-theme", state.theme);
+  storageSet("math-bomber-theme", state.theme);
   themeButtons.forEach(button => {
     const active = button.dataset.themeChoice === state.theme;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+}
+
+function storageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return "";
+  }
+}
+
+function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+}
+
+function storageRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
 }
 
 touchButtons.forEach(button => {
