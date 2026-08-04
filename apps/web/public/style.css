@@ -386,11 +386,12 @@ input:focus {
 .score-pill {
   flex: 0 0 auto;
   display: inline-grid;
-  grid-template-columns: 10px minmax(76px, 1fr) auto;
+  grid-template-columns: 10px minmax(92px, 1fr) auto;
   align-items: center;
   gap: 2px 6px;
   min-height: 44px;
-  max-width: 238px;
+  min-width: 218px;
+  max-width: 292px;
   padding: 5px 9px;
   border: 1px solid rgb(146 150 184 / 0.24);
   border-radius: 8px;
@@ -418,6 +419,7 @@ input:focus {
 
 .score-pill b {
   color: var(--yellow);
+  white-space: nowrap;
 }
 
 .score-pill small {
@@ -1424,7 +1426,7 @@ body[data-theme="toybox"] .theme-option {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--toy-text-muted);
+  color: var(--toy-text);
   box-shadow: none;
 }
 
@@ -1461,15 +1463,45 @@ body[data-theme="toybox"] .power-legend small {
 
 body[data-theme="toybox"] .join-form,
 body[data-theme="toybox"] .leaderboard-panel {
-  border: 2px dashed rgb(109 85 72 / 34%);
+  border: 2px dashed rgb(109 85 72 / 46%);
   border-radius: 22px;
-  background: rgb(255 253 244 / 0.75);
+  background: rgb(255 253 244 / 0.92);
   box-shadow: none;
 }
 
 body[data-theme="toybox"] label {
   color: var(--toy-text);
   text-transform: none;
+}
+
+body[data-theme="toybox"] legend {
+  color: var(--toy-text);
+  text-transform: none;
+}
+
+body[data-theme="toybox"] .choice-card,
+body[data-theme="toybox"] .compact-choices label {
+  border: 2px solid rgb(109 85 72 / 24%);
+  background: #fffdf4;
+  color: var(--toy-text);
+  box-shadow: 0 3px 0 rgb(91 66 50 / 8%);
+}
+
+body[data-theme="toybox"] .choice-card span,
+body[data-theme="toybox"] .compact-choices span {
+  color: var(--toy-text);
+}
+
+body[data-theme="toybox"] .choice-card small {
+  color: #5f4e45;
+}
+
+body[data-theme="toybox"] .choice-card:has(input:checked),
+body[data-theme="toybox"] .compact-choices label:has(input:checked) {
+  border-color: var(--toy-outline);
+  background: #fff0bd;
+  color: var(--toy-text);
+  box-shadow: inset 0 0 0 3px rgb(245 196 81 / 34%), 0 3px 0 rgb(91 66 50 / 12%);
 }
 
 body[data-theme="toybox"] .top-hud,
@@ -1539,6 +1571,10 @@ body[data-theme="toybox"] .score-pill {
 body[data-theme="toybox"] .leader-row strong,
 body[data-theme="toybox"] .score-pill b {
   color: var(--toy-orange);
+}
+
+body[data-theme="toybox"] .score-pill small {
+  color: #5f4e45;
 }
 
 body[data-theme="toybox"] .leader-row b,
@@ -2032,6 +2068,37 @@ body[data-theme="toybox"] .trail {
   .player,
   body[data-theme="toybox"] button {
     transition: none !important;
+  }
+
+  body[data-theme="toybox"] {
+    background: var(--toy-bg);
+  }
+
+  body[data-theme="toybox"] .arena,
+  body[data-theme="toybox"] .tile.wall,
+  body[data-theme="toybox"] .tile.block,
+  body[data-theme="toybox"] .player,
+  body[data-theme="toybox"] .bomb,
+  body[data-theme="toybox"] .explosion,
+  body[data-theme="toybox"] .powerup,
+  body[data-theme="toybox"] .mathToken {
+    box-shadow: none;
+  }
+
+  body[data-theme="toybox"] .player:not(.player--moving):not(.dead),
+  body[data-theme="toybox"] .player--damaged,
+  body[data-theme="toybox"] .player--powered,
+  body[data-theme="toybox"] .player.invulnerable,
+  body[data-theme="toybox"] .bomb,
+  body[data-theme="toybox"] .explosion,
+  body[data-theme="toybox"] .powerup,
+  body[data-theme="toybox"] .power-up {
+    animation: none !important;
+  }
+
+  body[data-theme="toybox"] .score-pill {
+    min-width: 232px;
+    max-width: 250px;
   }
 
   body[data-theme="toybox"] {

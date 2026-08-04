@@ -42,6 +42,7 @@ const touchButtons = $$("[data-touch-key]");
 const themeButtons = $$("[data-theme-choice]");
 const joystick = $("#joystick");
 const joystickKnob = $("#joystickKnob");
+const THEME_STORAGE_KEY = "math-bomber-theme-v2";
 
 const state = {
   socket: null,
@@ -79,7 +80,7 @@ const state = {
   lobbySig: "",
   overlaySig: "",
   renderQueued: false,
-  theme: storageGet("math-bomber-theme") === "toybox" ? "toybox" : "cyber"
+  theme: storageGet(THEME_STORAGE_KEY) === "cyber" ? "cyber" : "toybox"
 };
 
 document.title = "Math Bomber Arena";
@@ -374,8 +375,8 @@ function renderTopScores(players, me) {
   }, [
     h("i", { style: { background: player.color } }),
     h("span", { className: "score-name", text: `${index + 1}. ${player.nickname}` }),
-    h("b", { text: player.score }),
-    h("small", { text: `HP ${player.lives}  B ${player.bombsMax}  F ${player.flameRange}  S ${Number(player.speed || 0).toFixed(1)}` })
+    h("b", { text: `Score ${player.score}` }),
+    h("small", { text: `Lives ${player.lives} | Bombs ${player.bombsMax} | Flame ${player.flameRange} | Speed ${Number(player.speed || 0).toFixed(1)}` })
   ])));
 }
 
@@ -505,7 +506,7 @@ function renderScoreboard(players, me) {
       h("span", { text: `${slotLabel(player)} ${player.nickname}` }),
       h("span", {
         className: "stats",
-        text: `HP ${player.lives}  bombs ${player.bombsMax}  flame ${player.flameRange}  speed ${Number(player.speed || 0).toFixed(1)}  = ${player.mathSolved || 0}  score ${player.score}`
+        text: `Lives ${player.lives} | Bombs ${player.bombsMax} | Flame ${player.flameRange} | Speed ${Number(player.speed || 0).toFixed(1)} | Solved ${player.mathSolved || 0} | Score ${player.score}`
       })
     ]);
   }));
@@ -708,7 +709,7 @@ function overlayLine(tag, text, color) {
 function applyTheme(theme) {
   state.theme = theme === "toybox" ? "toybox" : "cyber";
   document.body.dataset.theme = state.theme;
-  storageSet("math-bomber-theme", state.theme);
+  storageSet(THEME_STORAGE_KEY, state.theme);
   themeButtons.forEach(button => {
     const active = button.dataset.themeChoice === state.theme;
     button.classList.toggle("active", active);
