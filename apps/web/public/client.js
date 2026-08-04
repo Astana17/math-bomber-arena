@@ -61,6 +61,7 @@ const state = {
   previousLives: new Map(),
   previousStats: new Map(),
   previousPositions: new Map(),
+  mapSig: "",
   explosionIds: new Set(),
   lastTrailAt: new Map(),
   lowMotion: window.matchMedia("(max-width: 720px), (prefers-reduced-motion: reduce)").matches,
@@ -365,19 +366,23 @@ function render(game) {
 
 function renderTopScores(players, me) {
   const sorted = [...players].sort((a, b) => b.score - a.score || b.mathSolved - a.mathSolved);
-  const sig = JSON.stringify(sorted.map(player => [player.id, player.nickname, player.score, player.mathSolved, player.color, player.id === me]));
+  const sig = JSON.stringify(sorted.map(player => [player.id, player.nickname, player.score, player.mathSolved, player.lives, player.bombsMax, player.flameRange, player.speed, player.color, player.id === me]));
   if (sig === state.topScoresSig) return;
   state.topScoresSig = sig;
   setChildren(topScores, sorted.map((player, index) => h("div", {
     className: `score-pill${player.id === me ? " me" : ""}`
   }, [
     h("i", { style: { background: player.color } }),
-    h("span", { text: `${index + 1}. ${player.nickname}` }),
-    h("b", { text: player.score })
+    h("span", { className: "score-name", text: `${index + 1}. ${player.nickname}` }),
+    h("b", { text: player.score }),
+    h("small", { text: `HP ${player.lives}  B ${player.bombsMax}  F ${player.flameRange}  S ${Number(player.speed || 0).toFixed(1)}` })
   ])));
 }
 
 function renderMap(map) {
+  const mapSig = map.map(row => row.join("")).join("|");
+  if (mapSig === state.mapSig) return;
+  state.mapSig = mapSig;
   const needed = new Set();
   map.forEach((row, y) => {
     row.forEach((type, x) => {
@@ -500,7 +505,7 @@ function renderScoreboard(players, me) {
       h("span", { text: `${slotLabel(player)} ${player.nickname}` }),
       h("span", {
         className: "stats",
-        text: `${"♥".repeat(Math.max(0, player.lives)) || "0"}  ● x${player.bombsMax}  ✦ ${player.flameRange}  = ${player.mathSolved || 0}  score ${player.score}`
+        text: `HP ${player.lives}  bombs ${player.bombsMax}  flame ${player.flameRange}  speed ${Number(player.speed || 0).toFixed(1)}  = ${player.mathSolved || 0}  score ${player.score}`
       })
     ]);
   }));

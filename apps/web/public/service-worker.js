@@ -1,4 +1,4 @@
-const CACHE_NAME = "math-bomber-arena-v8";
+const CACHE_NAME = "math-bomber-arena-v9";
 const STATIC_ASSETS = [
   "/",
   "/index.html",

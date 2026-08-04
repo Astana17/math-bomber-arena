@@ -15,9 +15,11 @@
   <body>
     <main id="app" class="shell">
       <section id="gate" class="gate">
-        <div class="theme-switcher" aria-label="Design theme">
-          <button class="theme-option" type="button" data-theme-choice="cyber" aria-pressed="true">Cyber</button>
-          <button class="theme-option" type="button" data-theme-choice="toybox" aria-pressed="false">Toybox</button>
+        <div class="gate-toolbar">
+          <div class="theme-switcher" aria-label="Design theme">
+            <button class="theme-option" type="button" data-theme-choice="cyber" aria-pressed="true">Cyber</button>
+            <button class="theme-option" type="button" data-theme-choice="toybox" aria-pressed="false">Toybox</button>
+          </div>
         </div>
         <div class="brand">
           <span class="mark"></span>
@@ -26,6 +28,15 @@
             <p id="tagline" class="tagline">Bomb blocks, grab math tokens, solve fast.</p>
           </div>
         </div>
+        <section class="leaderboard-panel" aria-labelledby="leaderboardTitle">
+          <div class="panel-heading">
+            <h2 id="leaderboardTitle">Leaderboard</h2>
+            <button id="refreshLeaderboard" class="secondary-button" type="button">Refresh</button>
+          </div>
+          <div id="leaderboard" class="leaderboard-list">
+            <p class="form-hint">Scores appear after completed matches.</p>
+          </div>
+        </section>
         <form id="joinForm" class="join-form">
           <label for="nickname">Nickname</label>
           <div class="join-row">
@@ -63,15 +74,6 @@
           <p id="nicknameHint" class="form-hint">Move with WASD or arrows. Drop bombs with Space.</p>
           <button id="joinButton" type="submit" disabled>Join Arena</button>
         </form>
-        <section class="leaderboard-panel" aria-labelledby="leaderboardTitle">
-          <div class="panel-heading">
-            <h2 id="leaderboardTitle">Leaderboard</h2>
-            <button id="refreshLeaderboard" class="secondary-button" type="button">Refresh</button>
-          </div>
-          <div id="leaderboard" class="leaderboard-list">
-            <p class="form-hint">Scores appear after completed matches.</p>
-          </div>
-        </section>
       </section>
 
       <section id="gameScreen" class="game-screen is-hidden">

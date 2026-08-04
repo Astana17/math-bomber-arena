@@ -94,6 +94,11 @@ button:hover {
   gap: 28px;
 }
 
+.gate-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -381,15 +386,16 @@ input:focus {
 .score-pill {
   flex: 0 0 auto;
   display: inline-grid;
-  grid-template-columns: 10px minmax(58px, auto) auto;
+  grid-template-columns: 10px minmax(76px, 1fr) auto;
   align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  max-width: 210px;
-  padding: 0 9px;
+  gap: 2px 6px;
+  min-height: 44px;
+  max-width: 238px;
+  padding: 5px 9px;
   border: 1px solid rgb(146 150 184 / 0.24);
   border-radius: 8px;
   background: rgb(255 255 255 / 0.035);
+  line-height: 1.05;
 }
 
 .score-pill.me {
@@ -403,7 +409,7 @@ input:focus {
   border-radius: 50%;
 }
 
-.score-pill span {
+.score-pill .score-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -412,6 +418,17 @@ input:focus {
 
 .score-pill b {
   color: var(--yellow);
+}
+
+.score-pill small {
+  grid-column: 2 / -1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .left-panel {
@@ -1142,6 +1159,15 @@ input:focus {
     padding: 12px;
   }
 
+  .gate {
+    gap: 14px;
+  }
+
+  .gate-toolbar,
+  .theme-switcher {
+    width: 100%;
+  }
+
   .top-hud {
     grid-template-columns: 1fr auto;
     justify-items: start;
@@ -1156,6 +1182,12 @@ input:focus {
     grid-column: 1 / -1;
     grid-row: 2;
     width: 100%;
+    gap: 6px;
+  }
+
+  .score-pill {
+    min-width: 142px;
+    max-width: 164px;
   }
 
   .join-row,
@@ -1201,6 +1233,7 @@ input:focus {
   background: rgb(7 7 17 / 0.78);
   isolation: isolate;
   overflow: hidden;
+  width: min(268px, 100%);
 }
 
 .theme-option {
@@ -1963,6 +1996,44 @@ body[data-theme="toybox"] .trail {
 }
 
 @media (max-width: 720px) {
+  body::after {
+    display: none;
+  }
+
+  .arena,
+  .join-form,
+  .leaderboard-panel,
+  .left-panel,
+  .chat,
+  .top-hud,
+  .score-row,
+  .score-pill,
+  .tile,
+  .player,
+  .bomb,
+  .explosion,
+  .powerup,
+  .mathToken,
+  .message,
+  .debris {
+    box-shadow: none;
+  }
+
+  .arena.shake,
+  .player.invulnerable,
+  .bomb,
+  .explosion,
+  .debris,
+  .message,
+  .score-row.hit {
+    animation: none !important;
+  }
+
+  .player,
+  body[data-theme="toybox"] button {
+    transition: none !important;
+  }
+
   body[data-theme="toybox"] {
     --cell: min(6.05vw, 32px);
   }
