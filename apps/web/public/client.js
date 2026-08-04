@@ -369,6 +369,9 @@ function scheduleRender() {
 }
 
 function render(game) {
+  const mePlayer = game.players.find(player => player.id === game.me);
+  const answeringChallenge = Boolean(game.challenge && game.phase === "playing" && (!mePlayer || mePlayer.alive));
+
   document.body.dataset.phase = game.phase;
   setText(phase, game.phase === "playing" ? "Battle in progress" : game.phase === "ended" ? "Game over" : "Lobby");
   setText(counter, `${game.lobby.count} / ${game.lobby.max}`);
@@ -390,17 +393,22 @@ function render(game) {
     setText(timer, game.challenge ? "Solve the challenge to move again." : "WASD or arrows move. Space drops bomb.");
   }
 
+  renderTopScores(game.players, game.me);
+  renderMathModal(game, mePlayer);
+  if (answeringChallenge) {
+    renderOverlay(game);
+    return;
+  }
+
   if (game.map) renderMap(game.map);
   renderCollection("bomb", game.bombs, b => ({ id: b.id, x: b.x, y: b.y, fuse: b.fuse }));
   renderCollection("explosion", game.explosions.flatMap(e => e.cells.map((cell, index) => ({ id: `${e.id}-${index}`, ...cell }))), e => e);
   renderCollection("powerup", game.powerups, p => ({ ...p, label: powerupLabel(p.type), aria: powerupName(p.type), type: p.type }));
   renderCollection("mathToken", game.mathTokens || [], token => ({ ...token, label: "=", aria: "Math challenge token" }));
   renderPlayers(game.players);
-  renderTopScores(game.players, game.me);
   renderScoreboard(game.players, game.me);
   renderLobbySectors(game);
   renderOverlay(game);
-  renderMathModal(game);
   runExplosionEffects(game);
 }
 
@@ -414,9 +422,18 @@ function renderTopScores(players, me) {
   }, [
     h("i", { style: { background: player.color } }),
     h("span", { className: "score-name", text: `${index + 1}. ${player.nickname}` }),
-    h("b", { text: `Score ${player.score}` }),
-    h("small", { text: `Lives ${player.lives} | Bombs ${player.bombsMax} | Flame ${player.flameRange} | Speed ${Number(player.speed || 0).toFixed(1)}` })
+    h("b", { className: "score-total", text: `Score ${player.score}` }),
+    h("div", { className: "score-stats" }, [
+      statChip("Lives", player.lives),
+      statChip("Bombs", player.bombsMax),
+      statChip("Flame", player.flameRange),
+      statChip("Speed", Number(player.speed || 0).toFixed(1))
+    ])
   ])));
+}
+
+function statChip(label, value) {
+  return h("span", { className: "score-stat", text: `${label} ${value}` });
 }
 
 function renderMap(map) {
@@ -695,9 +712,9 @@ function buildCalculator() {
   });
 }
 
-function renderMathModal(game) {
+function renderMathModal(game, mePlayer = game.players.find(player => player.id === game.me)) {
   const challenge = game.challenge;
-  if (!challenge) {
+  if (!challenge || (mePlayer && !mePlayer.alive)) {
     state.challengeId = null;
     state.answer = "";
     mathModal.classList.add("is-hidden");
@@ -708,8 +725,8 @@ function renderMathModal(game) {
     setAnswer("");
   }
   mathModal.classList.remove("is-hidden");
-  mathPrompt.textContent = challenge.prompt;
-  mathMode.textContent = game.mode === "hardcore" ? "Hardcore: bombs still hurt" : "Friendly: protected";
+  setText(mathPrompt, challenge.prompt);
+  setText(mathMode, game.mode === "hardcore" ? "Hardcore: bombs still hurt" : "Friendly: protected");
 }
 
 function handleMathKey(event) {
@@ -729,6 +746,7 @@ function handleMathKey(event) {
 }
 
 function setAnswer(value) {
+  if (state.answer === value && mathAnswer.textContent === (value || "0")) return;
   state.answer = value;
   mathAnswer.textContent = value || "0";
 }
