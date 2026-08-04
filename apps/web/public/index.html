@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Math Bomber Arena</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main id="app" class="shell">
+      <section id="gate" class="gate">
+        <div class="brand">
+          <span class="mark"></span>
+          <div>
+            <h1 id="gameTitle">Math Bomber Arena</h1>
+            <p id="tagline" class="tagline">Bomb blocks, grab math tokens, solve fast.</p>
+          </div>
+        </div>
+        <form id="joinForm" class="join-form">
+          <label for="nickname">Nickname</label>
+          <div class="join-row">
+            <input id="nickname" name="nickname" maxlength="18" autocomplete="nickname" required placeholder="Pick a battle name" aria-describedby="nicknameHint">
+            <button id="joinButton" type="submit">Join</button>
+          </div>
+          <fieldset class="choice-group">
+            <legend>Mode</legend>
+            <label class="choice-card">
+              <input type="radio" name="mode" value="friendly" checked>
+              <span>Friendly Mode</span>
+              <small>Solve at your own pace. You are protected while answering math challenges.</small>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="mode" value="hardcore">
+              <span>Hardcore Mode</span>
+              <small>Think fast. You are frozen while answering, but bombs can still hit you.</small>
+            </label>
+          </fieldset>
+          <fieldset class="choice-group compact-choices">
+            <legend>Difficulty</legend>
+            <label><input type="radio" name="difficulty" value="easy" checked><span>Easy</span></label>
+            <label><input type="radio" name="difficulty" value="normal"><span>Normal</span></label>
+            <label><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
+          </fieldset>
+          <p id="nicknameHint" class="form-hint">Move with WASD or arrows. Drop bombs with Space.</p>
+        </form>
+      </section>
+
+      <section id="gameScreen" class="game-screen is-hidden">
+        <header class="top-hud">
+          <span id="room">ROOM 08</span>
+          <span id="playersCount">PLAYERS 0/4</span>
+          <span id="matchClock">00:00</span>
+        </header>
+
+        <aside class="left-panel">
+          <div class="status" aria-live="polite">
+            <p id="phase">Connecting...</p>
+            <strong id="counter">0 / 4</strong>
+            <span id="timer">Waiting for players</span>
+          </div>
+          <div class="power-legend" aria-label="Power-up legend">
+            <div><span class="legend-icon math-token">=</span><strong>Math token</strong><small>Freeze and solve for score.</small></div>
+            <div><span class="legend-icon power-up power-up--bombs">B+</span><strong>Bombs</strong><small>Carry one more active bomb.</small></div>
+            <div><span class="legend-icon power-up power-up--flames">F+</span><strong>Flames</strong><small>Explosion reaches one more tile.</small></div>
+          </div>
+          <div id="scoreboard" class="scoreboard"></div>
+          <button id="restart" class="restart is-hidden" type="button">New Lobby</button>
+        </aside>
+
+        <section class="arena-wrap">
+          <div id="arena" class="arena" aria-label="Bomberman arena" tabindex="0">
+            <div id="lobbySectors" class="lobby-sectors"></div>
+            <div id="matchOverlay" class="match-overlay is-hidden"></div>
+          </div>
+        </section>
+
+        <aside class="chat">
+          <div class="chat-title">COMM CHANNEL</div>
+          <div id="messages" class="messages"></div>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" maxlength="180" autocomplete="off" placeholder="Message players">
+            <button type="submit">Send</button>
+          </form>
+        </aside>
+
+        <div class="touch-controls" aria-label="Mobile controls">
+          <div class="dpad">
+            <button type="button" data-touch-key="up" aria-label="Move up">↑</button>
+            <button type="button" data-touch-key="left" aria-label="Move left">←</button>
+            <button type="button" data-touch-key="down" aria-label="Move down">↓</button>
+            <button type="button" data-touch-key="right" aria-label="Move right">→</button>
+          </div>
+          <button class="bomb-button" type="button" data-touch-key="bomb">Bomb</button>
+        </div>
+      </section>
+
+      <section id="mathModal" class="math-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="mathPrompt">
+        <div class="math-panel">
+          <span id="mathMode" class="math-mode">Friendly</span>
+          <h2 id="mathPrompt">7 + 8</h2>
+          <output id="mathAnswer" class="math-answer">0</output>
+          <div id="calculator" class="calculator" aria-label="Calculator input"></div>
+          <p id="mathHint" class="form-hint">Correct answer gives score. Movement resumes after submit.</p>
+        </div>
+      </section>
+    </main>
+    <script src="/config.js"></script>
+    <script src="/client.js" type="module"></script>
+  </body>
+</html>
