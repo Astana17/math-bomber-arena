@@ -860,9 +860,14 @@ input:focus {
   border-left-color: rgb(146 150 184 / 0.4);
 }
 
-.restart {
+.restart,
+.leave-button {
   width: 100%;
   margin-top: 14px;
+}
+
+.leave-button {
+  margin-top: 8px;
 }
 
 .is-hidden {

@@ -174,6 +174,8 @@ async function handleMessage(client, raw) {
   } else if (message.type === "restart" && ["ended", "lobby"].includes(game.phase)) {
     resetGame();
     broadcastState(true);
+  } else if (message.type === "leave" && client.playerId) {
+    leaveGame(client);
   }
 }
 
@@ -185,12 +187,13 @@ function joinGame(client, nickname, mode, difficulty) {
   }
 
   const id = nextPlayerId++;
-  const start = STARTS[game.players.size];
+  const slot = getOpenSlot();
+  const start = STARTS[slot];
   const player = {
     id,
     nickname,
-    color: COLORS[game.players.size],
-    symbol: SYMBOLS[game.players.size],
+    color: COLORS[slot],
+    symbol: SYMBOLS[slot],
     x: start.x + 0.5,
     y: start.y + 0.5,
     spawn: start,
@@ -213,6 +216,12 @@ function joinGame(client, nickname, mode, difficulty) {
   broadcast({ type: "system", text: `${nickname} joined the arena.` });
   updateLobbyTimers();
   broadcastState(true);
+}
+
+function getOpenSlot() {
+  const used = new Set([...game.players.values()].map(player => `${player.spawn.x},${player.spawn.y}`));
+  const index = STARTS.findIndex(start => !used.has(`${start.x},${start.y}`));
+  return index === -1 ? game.players.size : index;
 }
 
 function updateLobbyTimers() {
@@ -528,6 +537,30 @@ function checkWinner() {
     broadcast({ type: "system", text: game.winner ? `${game.winner.nickname} wins!` : "Nobody survived." });
     recordMatchResults().catch(() => {});
   }
+}
+
+function leaveGame(client) {
+  const player = game.players.get(client.playerId);
+  if (!player) return;
+  if (game.phase === "lobby") {
+    game.players.delete(player.id);
+    if (game.players.size === 0) {
+      lobbyDeadline = null;
+      readyDeadline = null;
+    } else if (game.players.size < 4) {
+      readyDeadline = null;
+    }
+  } else {
+    player.alive = false;
+    player.lives = 0;
+    player.challenge = null;
+    checkWinner();
+  }
+  client.playerId = null;
+  client.input = { up: false, down: false, left: false, right: false, bomb: false };
+  send(client, { type: "left" });
+  broadcast({ type: "system", text: `${player.nickname} left the arena.` });
+  broadcastState(true);
 }
 
 function disconnect(client) {

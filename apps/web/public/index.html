@@ -30,7 +30,7 @@
           <label for="nickname">Nickname</label>
           <div class="join-row">
             <input id="nickname" name="nickname" maxlength="18" autocomplete="nickname" required placeholder="Pick a beta name" aria-describedby="nicknameHint">
-            <input id="pin" name="pin" class="pin-input" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" required placeholder="PIN">
+            <input id="pin" name="pin" class="pin-input" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="one-time-code" placeholder="PIN">
           </div>
           <div class="auth-actions">
             <button id="loginButton" type="button">Login</button>
@@ -95,6 +95,7 @@
           </div>
           <div id="scoreboard" class="scoreboard"></div>
           <button id="restart" class="restart is-hidden" type="button">New Lobby</button>
+          <button id="leaveButton" class="leave-button secondary-button" type="button">Leave Game</button>
         </aside>
 
         <section class="arena-wrap">

@@ -20,6 +20,7 @@ const messages = $("#messages");
 const chatForm = $("#chatForm");
 const chatInput = $("#chatInput");
 const restart = $("#restart");
+const leaveButton = $("#leaveButton");
 const chat = $(".chat");
 const gameTitle = $("#gameTitle");
 const tagline = $("#tagline");
@@ -107,6 +108,8 @@ function connect() {
       gate.classList.add("is-hidden");
       gameScreen.classList.remove("is-hidden");
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } else if (message.type === "left") {
+      showGate();
     } else if (message.type === "chat") {
       appendMessage(message.from, message.text, message.color, message.at);
     } else if (message.type === "system") {
@@ -155,9 +158,12 @@ on(chatForm, "submit", event => {
 
 on(restart, "click", () => {
   send({ type: "restart" });
-  gate.classList.remove("is-hidden");
-  gameScreen.classList.add("is-hidden");
-  state.joined = false;
+  showGate();
+});
+
+on(leaveButton, "click", () => {
+  send({ type: "leave" });
+  showGate();
 });
 
 on(window, "keydown", event => {
@@ -223,8 +229,9 @@ async function restoreSession() {
     if (!response.ok || !data.ok) throw new Error("expired");
     state.auth.player = data.player;
     nicknameInput.value = data.player.displayName;
+    pinInput.value = "";
     renderAuth();
-    setAuthStatus(`${data.player.displayName} is ready.`, false);
+    setAuthStatus(`Saved player: ${data.player.displayName}. PIN is not needed on this device.`, false);
   } catch {
     storageRemove("math-bomber-token");
     state.auth = { token: "", player: null };
@@ -237,6 +244,20 @@ function renderAuth() {
   joinButton.disabled = !player;
   playerBadge.classList.toggle("is-hidden", !player);
   if (player) playerName.textContent = player.displayName;
+}
+
+function showGate() {
+  gate.classList.remove("is-hidden");
+  gameScreen.classList.add("is-hidden");
+  mathModal.classList.add("is-hidden");
+  state.joined = false;
+  state.me = null;
+  state.game = null;
+  state.keys.clear();
+  state.touch = { up: false, down: false, left: false, right: false, bomb: false };
+  state.lastInput = "";
+  state.challengeId = null;
+  sendInput();
 }
 
 function setAuthStatus(text, isError) {
