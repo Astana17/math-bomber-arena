@@ -1,13 +1,13 @@
-const CACHE_NAME = "math-bomber-arena-v9";
+const CACHE_NAME = "math-bomber-arena-v10";
 const STATIC_ASSETS = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/client.js",
-  "/mini-framework.js",
-  "/config.js",
-  "/manifest.webmanifest",
-  "/icons/icon.svg"
+  "./",
+  "./index.html",
+  "./style.css",
+  "./client.js",
+  "./mini-framework.js",
+  "./config.js",
+  "./manifest.webmanifest",
+  "./icons/icon.svg"
 ];
 
 self.addEventListener("install", event => {
