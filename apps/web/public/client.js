@@ -38,6 +38,7 @@ const mathMode = $("#mathMode");
 const mathAnswer = $("#mathAnswer");
 const calculator = $("#calculator");
 const touchButtons = $$("[data-touch-key]");
+const themeButtons = $$("[data-theme-choice]");
 const joystick = $("#joystick");
 const joystickKnob = $("#joystickKnob");
 
@@ -75,17 +76,21 @@ const state = {
   leaderboardSig: "",
   lobbySig: "",
   overlaySig: "",
-  renderQueued: false
+  renderQueued: false,
+  theme: localStorage.getItem("math-bomber-theme") === "toybox" ? "toybox" : "cyber"
 };
 
 document.title = "Math Bomber Arena";
 gameTitle.textContent = "Math Bomber Arena";
 tagline.textContent = "Bomb blocks, grab math tokens, solve fast.";
 joinButton.textContent = "Join Arena";
+applyTheme(state.theme);
 buildCalculator();
 restoreSession();
 loadLeaderboard();
 registerServiceWorker();
+
+themeButtons.forEach(button => on(button, "click", () => applyTheme(button.dataset.themeChoice)));
 
 function connect() {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -672,6 +677,17 @@ function formatTime(value) {
 
 function overlayLine(tag, text, color) {
   return h(tag, { text, style: color ? { color } : {} });
+}
+
+function applyTheme(theme) {
+  state.theme = theme === "toybox" ? "toybox" : "cyber";
+  document.body.dataset.theme = state.theme;
+  localStorage.setItem("math-bomber-theme", state.theme);
+  themeButtons.forEach(button => {
+    const active = button.dataset.themeChoice === state.theme;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
 }
 
 touchButtons.forEach(button => {

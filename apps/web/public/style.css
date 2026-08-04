@@ -1421,7 +1421,8 @@ body[data-theme="toybox"] .power-legend small {
   color: var(--toy-text-muted);
 }
 
-body[data-theme="toybox"] .join-form {
+body[data-theme="toybox"] .join-form,
+body[data-theme="toybox"] .leaderboard-panel {
   border: 2px dashed rgb(109 85 72 / 34%);
   border-radius: 22px;
   background: rgb(255 253 244 / 0.75);
@@ -1483,8 +1484,32 @@ body[data-theme="toybox"] .score-row.me {
 }
 
 body[data-theme="toybox"] .score-row .stats,
-body[data-theme="toybox"] .power-legend strong {
+body[data-theme="toybox"] .power-legend strong,
+body[data-theme="toybox"] .leader-row span {
   color: var(--toy-text);
+}
+
+body[data-theme="toybox"] .leader-row,
+body[data-theme="toybox"] .score-pill {
+  border: 2px solid rgb(109 85 72 / 18%);
+  border-radius: 16px;
+  background: var(--toy-surface-strong);
+  color: var(--toy-text);
+  box-shadow: 0 3px 0 rgb(91 66 50 / 10%);
+}
+
+body[data-theme="toybox"] .leader-row strong,
+body[data-theme="toybox"] .score-pill b {
+  color: var(--toy-orange);
+}
+
+body[data-theme="toybox"] .leader-row b,
+body[data-theme="toybox"] .panel-heading h2 {
+  color: var(--toy-blue);
+}
+
+body[data-theme="toybox"] .leader-row small {
+  color: var(--toy-text-muted);
 }
 
 body[data-theme="toybox"] .dot {
@@ -1730,6 +1755,27 @@ body[data-theme="toybox"] .power-up--flames {
 
 body[data-theme="toybox"] .power-up--speed {
   background: linear-gradient(180deg, #d8f7ff, var(--toy-blue));
+}
+
+body[data-theme="toybox"] .mathToken,
+body[data-theme="toybox"] .math-token {
+  background: linear-gradient(180deg, #fff8e8, var(--toy-yellow));
+  border-color: var(--toy-outline);
+  color: var(--toy-text);
+}
+
+body[data-theme="toybox"] .joystick {
+  border: 2px solid var(--toy-outline);
+  background:
+    radial-gradient(circle at center, rgb(255 248 232 / 0.7) 0 32%, transparent 33%),
+    var(--toy-cream);
+  box-shadow: var(--toy-shadow);
+}
+
+body[data-theme="toybox"] .joystick-knob {
+  border-color: var(--toy-outline);
+  background: linear-gradient(180deg, #9fd6ff, var(--toy-blue));
+  box-shadow: 0 4px 0 rgb(91 66 50 / 0.18);
 }
 
 body[data-theme="toybox"] .debris {
