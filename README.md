@@ -1,84 +1,44 @@
 # Math Bomber Arena
 
-Math Bomber Arena is a mobile-friendly multiplayer web game inspired by Bomberman. Players move through a fixed DOM/CSS arena, place bombs, destroy boxes, collect math challenge tokens, and solve quick mental-math prompts for score.
+Math Bomber Arena is a browser multiplayer game that combines a real-time grid arena with mental arithmetic. Players break boxes to discover math tokens, solve arithmetic prompts, and compete for score.
 
-This repository starts as a clean MVP extracted from `bomberman-dom`, with a static frontend for GitHub Pages and an authoritative Node.js WebSocket server for Railway, Render, Fly.io, or local play.
+- **Friendly mode** protects players from explosions while they answer.
+- **Hardcore mode** keeps players vulnerable during a challenge.
+- Desktop players use the keyboard. Mobile players use an on-screen joystick, Bomb button, and number pad.
 
-## MVP Status
+## Try a local match
 
-- DOM/CSS arena, no canvas or WebGL.
-- Node.js WebSocket server with authoritative movement, bombs, explosions, blocks, lives, chat, and scoring.
-- Lobby with nickname, game mode, and math difficulty selection.
-- Friendly Mode: frozen while answering and protected from explosions.
-- Hardcore Mode: frozen while answering and still vulnerable.
-- Math tokens can drop from destroyed boxes.
-- Challenge modal with calculator-style buttons and desktop keyboard input.
-- Mobile joystick and Bomb button.
-- PWA manifest, app icon, and service worker for install-to-home-screen testing.
-- Beta auth with nickname + 4-digit PIN through backend API.
-- Leaderboard with total score, games played, wins, solved math count, and best score.
+From the repository root, start the Node.js server:
 
-## Run Locally
-
-```sh
+```bash
 npm start
 ```
 
-Open `http://localhost:3000` in 2 to 4 browser tabs.
+Open `http://localhost:3000` in two separate browser sessions, such as a regular window and a private window. Create a different test nickname and PIN in each session, then join the arena. Separate sessions keep the two beta logins independent.
 
-The server also serves `apps/web/public` for local development. In production, GitHub Pages publishes `apps/web/public` through `.github/workflows/deploy-pages.yml`, while the WebSocket/API backend runs separately on Railway.
+Use WASD or the arrow keys to move and Space to place a bomb. In a math prompt, use the on-screen keypad or the number, Backspace, and Enter keys.
 
-## Beta Login
+## Architecture
 
-The MVP uses a friend-only beta login:
+- [Browser client](apps/web/public) renders the arena with HTML and CSS and receives updates over WebSocket.
+- [Node.js server](apps/server/server.js) owns movement, explosions, scores, and match state. It serves the frontend locally and exposes `GET /health` for deployment checks.
+- The PWA manifest and service worker support home-screen installation testing.
+- [GitHub Pages workflow](.github/workflows/deploy-pages.yml) publishes the static frontend. A hosted instance needs a separate backend and its API and WebSocket URLs set in [config.js](apps/web/public/config.js).
 
-- Create/login with nickname + 4-digit PIN.
-- PINs are hashed on the backend.
-- Session tokens are stored in browser `localStorage`.
-- Local development stores beta users in `apps/server/data/beta-auth.json`, which is ignored by git.
+See [architecture notes](docs/architecture.md) for the project layout and deployment design.
 
-This is intentionally lightweight for testing with friends. Before a public release, add stronger abuse protection, invite codes, and a production auth review.
+## Beta storage and configuration
 
-## Environment
+The local beta stores test profiles and leaderboard data in `apps/server/data/beta-auth.json`. The server can use Supabase for persistent storage when both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set. The repository contains migrations for [beta profiles](supabase/migrations/001_beta_auth.sql) and the [leaderboard](supabase/migrations/002_leaderboard.sql).
 
-Frontend config lives in `apps/web/public/config.js`:
+Set `PORT`, `HOST`, and `CORS_ORIGIN` in the server environment as needed. Keep the service-role key in server-side configuration. See the [Supabase API key guide](https://supabase.com/docs/guides/api/api-keys).
 
-```js
-window.MATH_BOMBER_WS_URL = "wss://your-game-server.example.com";
-window.MATH_BOMBER_API_URL = "https://your-game-server.example.com";
+The nickname and four-digit PIN flow is intended for a limited beta.
+
+## Check the source
+
+```bash
+npm run check
 ```
 
-Backend variables:
-
-```sh
-PORT=3000
-HOST=0.0.0.0
-CORS_ORIGIN=https://astana17.github.io
-SUPABASE_URL=https://yulwyakpfjxrgxtuqsvf.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-backend-only-service-role-key
-```
-
-`SUPABASE_URL` is safe to show publicly, but `SUPABASE_SERVICE_ROLE_KEY` must always stay secret and backend-only. Put the real service role key only in Railway environment variables, never in README, `config.js`, frontend files, GitHub Pages, or browser code. If those Supabase variables are missing, the backend uses the local ignored JSON fallback.
-
-Supabase schema lives in `supabase/migrations/001_beta_auth.sql` and has been prepared for the `Brain_bomber` Supabase project.
-
-Leaderboard schema lives in `supabase/migrations/002_leaderboard.sql`.
-
-## Controls
-
-- Move: `WASD`, arrow keys, or mobile joystick.
-- Drop bomb: `Space` or mobile Bomb button.
-- Math modal: number keys, Backspace, Enter, or on-screen calculator.
-
-## Roadmap
-
-1. Basic project scaffold.
-2. Lobby/create/join match.
-3. Realtime movement and bombs.
-4. Destructible boxes and math token drops.
-5. Math challenge modal.
-6. Friendly/Hardcore behavior.
-7. Difficulty levels.
-8. Mobile controls.
-9. Supabase leaderboard, profiles, and match history.
-10. GitHub Pages frontend plus hosted WebSocket backend deployment.
+This checks JavaScript syntax for the server, client, and service worker.
